@@ -5,7 +5,9 @@ avec toutes les fonctions « premium » incluses gratuitement et une souris de b
 
 ## Installer
 
-Lancez `dist\Ambiance Setup 1.0.0.exe`. L'installateur crée un raccourci sur le Bureau et dans le menu Démarrer,
+Téléchargez `Ambiance Setup 1.0.0.exe` depuis la page
+[Releases](https://github.com/pepittto29/ambiance/releases) et lancez-le
+(ou compilez-le vous-même avec `npm run dist`, il apparaît alors dans `dist\`). L'installateur crée un raccourci sur le Bureau et dans le menu Démarrer,
 et l'application apparaît dans « Applications installées » de Windows (désinstallation classique).
 
 > L'installateur n'est pas signé : Windows SmartScreen peut afficher « Windows a protégé votre ordinateur ».
