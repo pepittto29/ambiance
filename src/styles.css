@@ -52,6 +52,9 @@ body {
   background: var(--bg);
   display: grid;
   grid-template-rows: 40px minmax(0, 1fr) auto;
+  /* La colonne ne doit jamais s'élargir au contenu : sinon une longue liste de sons
+     dans le lecteur pousse toute l'interface hors de la fenêtre. */
+  grid-template-columns: minmax(0, 1fr);
   overflow: hidden;
   user-select: none;
 }
@@ -595,3 +598,10 @@ details.credits summary { cursor: pointer; padding: 10px 0; }
 }
 
 .row-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* Barres de défilement fines, façon Fluent. */
+::-webkit-scrollbar { width: 8px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { border-radius: 4px; background: var(--subtle-2); }
+::-webkit-scrollbar-thumb:hover { background: var(--text-2); }
+.active-list { scrollbar-gutter: stable; padding-bottom: 4px; }

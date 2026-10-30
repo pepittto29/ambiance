@@ -504,6 +504,10 @@
   }));
 
   $('#btn-play').addEventListener('click', togglePlay);
+  // La molette fait défiler horizontalement la liste des sons actifs.
+  $('#active-list').addEventListener('wheel', e => {
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.currentTarget.scrollLeft += e.deltaY; e.preventDefault(); }
+  }, { passive: false });
   $('#c-play').addEventListener('click', togglePlay);
   $('#btn-import').addEventListener('click', importSounds);
   $('#btn-save').addEventListener('click', saveMix);
