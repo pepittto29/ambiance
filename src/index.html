@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>Ambiance</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="titlebar">
+    <img src="../assets/icon.png" alt="" class="app-icon">
+    <span>Ambiance</span>
+  </div>
+
+  <div id="app">
+    <nav id="nav">
+      <button class="nav-item active" data-page="sounds"><span class="ico">&#xEC4F;</span><span class="lbl">Sons</span></button>
+      <button class="nav-item" data-page="catalog"><span class="ico">&#xE753;</span><span class="lbl">Catalogue</span></button>
+      <button class="nav-item" data-page="focus"><span class="ico">&#xE916;</span><span class="lbl">Focus</span></button>
+      <button class="nav-item" data-page="channels"><span class="ico">&#xE714;</span><span class="lbl">Chaînes</span></button>
+      <button class="nav-item" data-page="breath"><span class="ico">&#xE9D9;</span><span class="lbl">Respiration</span></button>
+      <button class="nav-item" data-page="mixes"><span class="ico">&#xE734;</span><span class="lbl">Mes mixages</span></button>
+      <div class="spacer"></div>
+      <button class="nav-item" data-page="settings"><span class="ico">&#xE713;</span><span class="lbl">Paramètres</span></button>
+    </nav>
+
+    <main id="content">
+      <section id="page-sounds" class="page active">
+        <header class="page-head">
+          <div>
+            <h1>Sons</h1>
+            <p class="sub">Touchez un son pour l'ajouter au mixage. Réglez le volume de chacun.</p>
+          </div>
+          <button id="btn-import" class="btn"><span class="ico">&#xE710;</span> Importer un son</button>
+        </header>
+        <div id="sound-grid" class="grid"></div>
+      </section>
+
+      <section id="page-catalog" class="page">
+        <header class="page-head">
+          <div>
+            <h1>Catalogue</h1>
+            <p class="sub">De nouvelles ambiances à ajouter à votre bibliothèque.</p>
+          </div>
+        </header>
+        <div id="catalog-grid" class="grid wide"></div>
+      </section>
+
+      <section id="page-focus" class="page">
+        <header class="page-head">
+          <div>
+            <h1>Focus</h1>
+            <p class="sub">Sessions de concentration type Pomodoro, avec vos tâches et vos statistiques.</p>
+          </div>
+        </header>
+        <div class="focus-layout">
+          <div class="card focus-timer">
+            <div class="ring">
+              <svg viewBox="0 0 120 120"><circle class="ring-bg" cx="60" cy="60" r="52"/><circle id="f-ring" class="ring-fg" cx="60" cy="60" r="52"/></svg>
+              <div class="ring-text">
+                <div id="f-phase" class="f-phase">Prêt</div>
+                <div id="f-time" class="f-time">25:00</div>
+                <div id="f-round" class="f-round"></div>
+              </div>
+            </div>
+            <div class="f-controls">
+              <button id="f-start" class="btn accent"><span class="ico">&#xE768;</span> Démarrer</button>
+              <button id="f-skip" class="icon-btn ico" title="Passer à la phase suivante">&#xE893;</button>
+              <button id="f-reset" class="icon-btn ico" title="Réinitialiser">&#xE72C;</button>
+            </div>
+            <div class="f-settings">
+              <label>Concentration <span><input type="number" id="f-work" min="1" max="180"> min</span></label>
+              <label>Pause <span><input type="number" id="f-break" min="1" max="60"> min</span></label>
+              <label>Sessions <span><input type="number" id="f-rounds" min="1" max="12"></span></label>
+              <label class="f-check"><input type="checkbox" id="f-sound"> Jouer l'ambiance pendant la concentration</label>
+            </div>
+          </div>
+          <div class="focus-side">
+            <div class="card">
+              <h3>Tâches</h3>
+              <form id="task-form" class="task-form"><input id="task-input" type="text" placeholder="Ajouter une tâche…" maxlength="80"><button class="btn accent ico" title="Ajouter">&#xE710;</button></form>
+              <ul id="task-list" class="task-list"></ul>
+            </div>
+            <div class="card">
+              <h3>Statistiques</h3>
+              <div class="stats">
+                <div><b id="st-today">0</b><span>min aujourd'hui</span></div>
+                <div><b id="st-sessions">0</b><span>sessions au total</span></div>
+                <div><b id="st-streak">0</b><span>jours d'affilée</span></div>
+              </div>
+              <div id="st-week" class="week"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-channels" class="page">
+        <header class="page-head">
+          <div>
+            <h1>Chaînes</h1>
+            <p class="sub">Des ambiances immersives en plein écran : une scène animée et un mixage assorti. Échap pour quitter.</p>
+          </div>
+        </header>
+        <div id="channel-grid" class="grid wide"></div>
+      </section>
+
+      <section id="page-breath" class="page">
+        <header class="page-head">
+          <div>
+            <h1>Respiration guidée</h1>
+            <p class="sub">Suivez le cercle pour calmer votre respiration.</p>
+          </div>
+        </header>
+        <div class="card breath">
+          <div class="breath-stage">
+            <div id="b-circle" class="b-circle"></div>
+            <div class="b-text"><div id="b-label">Prêt</div><div id="b-count" class="b-count"></div></div>
+          </div>
+          <div class="b-options">
+            <select id="b-pattern">
+              <option value="coherence">Cohérence cardiaque (5-5)</option>
+              <option value="square">Respiration carrée (4-4-4-4)</option>
+              <option value="478">Relaxation 4-7-8</option>
+              <option value="calm">Apaisement (4-6)</option>
+            </select>
+            <select id="b-duration">
+              <option value="1">1 minute</option>
+              <option value="3">3 minutes</option>
+              <option value="5" selected>5 minutes</option>
+              <option value="10">10 minutes</option>
+            </select>
+            <button id="b-start" class="btn accent"><span class="ico">&#xE768;</span> Commencer</button>
+          </div>
+          <p id="b-remaining" class="sub center"></p>
+        </div>
+      </section>
+
+      <section id="page-mixes" class="page">
+        <header class="page-head">
+          <div>
+            <h1>Mes mixages</h1>
+            <p class="sub">Enregistrez vos mélanges avec le bouton <span class="ico inline">&#xE74E;</span> du lecteur.</p>
+          </div>
+        </header>
+        <div id="mix-list" class="mix-list"></div>
+        <h2>Suggestions</h2>
+        <div id="mix-suggestions" class="mix-list"></div>
+      </section>
+
+      <section id="page-settings" class="page">
+        <header class="page-head"><div><h1>Paramètres</h1></div></header>
+        <div class="setting">
+          <div><div class="s-title">Écran de veille automatique</div><div class="s-sub">Lance l'écran de veille pendant la lecture quand vous n'utilisez plus l'application.</div></div>
+          <label class="switch"><input type="checkbox" id="set-saver"><span></span></label>
+        </div>
+        <div class="setting">
+          <div><div class="s-title">Délai avant l'écran de veille</div></div>
+          <select id="set-saver-delay">
+            <option value="1">1 minute</option>
+            <option value="5">5 minutes</option>
+            <option value="10">10 minutes</option>
+            <option value="15">15 minutes</option>
+          </select>
+        </div>
+        <div class="setting">
+          <div><div class="s-title">Reprendre la lecture au démarrage</div><div class="s-sub">Rejoue automatiquement le dernier mixage à l'ouverture.</div></div>
+          <label class="switch"><input type="checkbox" id="set-autoplay"><span></span></label>
+        </div>
+        <div class="setting">
+          <div><div class="s-title">Lancer avec Windows</div><div class="s-sub">Démarre discrètement dans la zone de notification.</div></div>
+          <label class="switch"><input type="checkbox" id="set-login"><span></span></label>
+        </div>
+        <div class="setting">
+          <div><div class="s-title">Fermer dans la zone de notification</div><div class="s-sub">La croix coupe le son et range l'application près de l'horloge : seul le compagnon de bureau continue.</div></div>
+          <label class="switch"><input type="checkbox" id="set-tray"><span></span></label>
+        </div>
+        <h2>Compagnon de bureau</h2>
+        <div class="setting">
+          <div><div class="s-title">Afficher le compagnon</div><div class="s-sub">Un petit animal rétro se promène sur tout Windows. Caressez-le en le survolant, cliquez dessus, attrapez-le ou lancez-le.</div></div>
+          <label class="switch"><input type="checkbox" id="set-pet"><span></span></label>
+        </div>
+        <div class="setting">
+          <div><div class="s-title">Animal</div><div class="s-sub">Chacun a sa nourriture préférée : fromage, carotte ou poisson.</div></div>
+          <select id="set-pet-animal">
+            <option value="souris">Souris</option>
+            <option value="hamster">Hamster</option>
+            <option value="lapin">Lapin</option>
+            <option value="chat">Chat</option>
+          </select>
+        </div>
+        <div class="setting">
+          <div><div class="s-title">Terrier</div><div id="burrow-status" class="s-sub">Choisissez où votre compagnon a sa maison. Il y rentre pour dormir ou quand vous êtes concentré.</div></div>
+          <div class="row-actions">
+            <button id="btn-burrow" class="btn accent">Placer le terrier</button>
+            <button id="btn-burrow-clear" class="btn hidden">Retirer</button>
+          </div>
+        </div>
+        <div class="setting">
+          <div><div class="s-title">Couinements</div></div>
+          <label class="switch"><input type="checkbox" id="set-pet-sound"><span></span></label>
+        </div>
+        <div class="setting">
+          <div><div class="s-title">Marcher sur ce qui est affiché</div><div class="s-sub">Le compagnon repère les lignes visibles à l'écran (séparateurs, cadres, zones de saisie) pour s'y promener. L'analyse se fait localement, rien n'est enregistré ni envoyé.</div></div>
+          <label class="switch"><input type="checkbox" id="set-pet-screen"><span></span></label>
+        </div>
+        <div class="setting">
+          <div><div class="s-title">À manger tous les quarts d'heure</div><div class="s-sub">De la nourriture tombe du ciel et votre compagnon part la chercher. Aussi disponible depuis l'icône près de l'horloge (« Donner à manger »).</div></div>
+          <label class="switch"><input type="checkbox" id="set-pet-cheese"><span></span></label>
+        </div>
+        <div class="setting">
+          <div><div class="s-title">Trous aléatoires</div><div class="s-sub">De temps en temps, un trou s'ouvre sur le bas de l'écran : votre compagnon peut y plonger et ressortir par son terrier.</div></div>
+          <label class="switch"><input type="checkbox" id="set-pet-holes"><span></span></label>
+        </div>
+        <h2>Crédits</h2>
+        <details class="setting credits"><summary class="s-title">Enregistrements sonores (Creative Commons 0)</summary><ul id="credits"></ul></details>
+        <div class="setting">
+          <div><div class="s-title">Réinitialiser</div><div class="s-sub">Supprime les mixages, les sons importés et les préférences.</div></div>
+          <button id="btn-reset" class="btn danger">Réinitialiser</button>
+        </div>
+        <p class="about">Ambiance <span id="version"></span> · Aucun compte, aucune donnée envoyée. Tous les sons intégrés sont générés localement.</p>
+      </section>
+    </main>
+  </div>
+
+  <footer id="player">
+    <button id="btn-play" class="round ico" title="Lecture (Espace)">&#xE768;</button>
+    <div id="active-list" class="active-list"></div>
+    <div class="player-right">
+      <div class="vol"><span class="ico">&#xE767;</span><input type="range" id="master" min="0" max="100"></div>
+      <button id="btn-timer" class="icon-btn" title="Minuteur"><span class="ico">&#xE916;</span><span id="timer-label" class="timer-label"></span></button>
+      <button id="btn-save" class="icon-btn ico" title="Enregistrer le mixage">&#xE74E;</button>
+      <button id="btn-saver" class="icon-btn ico" title="Écran de veille">&#xE708;</button>
+      <button id="btn-compact" class="icon-btn ico" title="Mode compact">&#xE73F;</button>
+    </div>
+  </footer>
+
+  <div id="compact-view">
+    <div class="c-head">
+      <button id="c-play" class="round small ico">&#xE768;</button>
+      <span id="c-timer" class="timer-label"></span>
+      <div class="c-spacer"></div>
+      <button id="c-expand" class="icon-btn ico" title="Agrandir">&#xE740;</button>
+    </div>
+    <div id="c-list" class="c-list"></div>
+  </div>
+
+  <div id="timer-menu" class="flyout hidden">
+    <div class="fly-title">Arrêter la lecture dans…</div>
+    <div class="timer-grid">
+      <button data-min="5">5 min</button>
+      <button data-min="15">15 min</button>
+      <button data-min="25">Pomodoro 25</button>
+      <button data-min="30">30 min</button>
+      <button data-min="45">45 min</button>
+      <button data-min="60">1 h</button>
+      <button data-min="90">1 h 30</button>
+      <button data-min="120">2 h</button>
+    </div>
+    <button id="timer-cancel" class="btn full hidden">Annuler le minuteur</button>
+  </div>
+
+  <div id="modal" class="modal hidden">
+    <div class="dialog">
+      <h3 id="modal-title"></h3>
+      <p id="modal-text"></p>
+      <input id="modal-input" type="text" maxlength="40">
+      <div class="dialog-actions">
+        <button id="modal-ok" class="btn accent">OK</button>
+        <button id="modal-cancel" class="btn">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="screensaver" hidden></canvas>
+  <div id="toast"></div>
+
+  <script src="audio.js"></script>
+  <script src="screensaver.js"></script>
+  <script src="app.js"></script>
+  <script src="premium.js"></script>
+</body>
+</html>
