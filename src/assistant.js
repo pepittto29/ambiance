@@ -261,6 +261,8 @@
       { role: 'assistant', content: `Coucou ! ${cri} ! Qu'est-ce qu'on écoute aujourd'hui ?` },
       { role: 'user', content: 'Je suis un peu stressé.' },
       { role: 'assistant', content: 'Oh… Respire un grand coup avec moi. Un peu de pluie douce, ça te dirait ?' },
+      { role: 'user', content: 'J\'ai eu une journée nulle.' },
+      { role: 'assistant', content: 'Oh non… Tu veux m\'en parler ? Je t\'écoute, bien au chaud.' },
       { role: 'user', content: 'Tu aimes quoi ?' },
       { role: 'assistant', content: `J'adore grignoter ${a.snack} en écoutant le feu de cheminée !` },
     ];
@@ -349,7 +351,10 @@
     const sounds = findSounds(t);
     if (!sounds.length) sounds.push(retro ? 'chiptune' : focus ? 'brown' : night ? 'rain' : calm ? 'creek' : 'cafe');
     const words = raw.replace(/^\s*(cr[ée]e[rsz]?|fais|invente|pr[ée]pare|imagine)(-moi)?\s+/i, '').replace(/^(un\s+)?(nouveau\s+)?mode\s*/i, '').replace(/^(pour|de|du|d')\s*/i, '').trim();
-    const name = (words.split(/\s+/).slice(0, 3).join(' ') || 'Mon mode').slice(0, 24);
+    // Trois mots au plus, sans couper un mot en deux.
+    let name = words.split(/\s+/).slice(0, 3).join(' ');
+    while (name.length > 24 && name.includes(' ')) name = name.replace(/\s+\S*$/, '');
+    name = (name || 'Mon mode').slice(0, 24);
     return {
       nom: name[0].toUpperCase() + name.slice(1), emoji: retro ? '👾' : focus ? '🎯' : night ? '🌙' : calm ? '🍃' : fun ? '🎮' : '✨',
       description: words.slice(0, 90), sons: sounds.slice(0, 3), focus, energie: focus || calm || night ? 'calme' : fun || retro ? 'joueur' : 'normal',
@@ -450,7 +455,8 @@
       if (cmd) {
         const r = await run(cmd);
         say = r.say; did = r.did || '';
-      } else if (learned === 'name' || /(mon prenom|comment je m appelle|qui suis je|tu sais qui je suis)/.test(norm(raw))) {
+      } else if (learned === 'name' || /(mon prenom|comment je m appelle|qui suis je|tu sais qui je suis|blague|drole|fais moi rire)/.test(norm(raw))) {
+        // Les blagues viennent de la liste : les modèles locaux refusent souvent ou en inventent sans chute.
         say = smallTalk(raw, learned);
       } else if (aiState && aiState.ready) {
         if (!aiState.running) thinking.lastChild.textContent = 'Je me réveille… (quelques secondes)';
