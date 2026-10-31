@@ -8,6 +8,7 @@
 //   win            : réglages Windows (null = laisser tel quel)
 //   minimize       : applications à réduire en entrant dans le mode
 //   launch         : sites ou applications à ouvrir en entrant dans le mode
+//   music          : musique à lancer (lien ou URI Spotify, « liked » pour les titres likés, lien Deezer, YouTube Music…)
 const BLANK_WIN = { theme: null, notifications: null, hideIcons: null, autoHideTaskbar: null, power: null, wallpaper: null, keepAwake: false };
 
 const DEFAULT_MODES = [
@@ -62,6 +63,7 @@ function normalize(m) {
     win: { ...BLANK_WIN, ...(m.win || {}) },
     minimize: m.minimize || base.minimize || [],
     launch: m.launch || base.launch || [],
+    music: typeof m.music === 'string' ? m.music : (base.music || ''),
   };
 }
 

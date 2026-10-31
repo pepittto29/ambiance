@@ -696,3 +696,42 @@ details.credits summary { cursor: pointer; padding: 10px 0; }
 .tk-item .icon-btn { font-size: 13px; opacity: 0; }
 .tk-item:hover .icon-btn { opacity: 1; }
 .tk-empty { padding: 24px; text-align: center; color: var(--text-2); }
+
+/* Page Musique */
+.mu-now { display: flex; gap: 20px; align-items: center; max-width: 900px; }
+.mu-art { width: 132px; height: 132px; border-radius: 8px; object-fit: cover; flex-shrink: 0; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+.mu-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.mu-app { font-size: 12px; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.mu-title { font-size: 20px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mu-artist { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mu-time { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-2); margin-top: 8px; font-variant-numeric: tabular-nums; }
+.mu-bar { flex: 1; height: 4px; border-radius: 2px; background: var(--subtle-2); overflow: hidden; }
+.mu-bar i { display: block; height: 100%; width: 0; background: var(--accent); }
+.mu-controls { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.mu-play { width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--accent); color: var(--on-accent); font-size: 18px; cursor: pointer; }
+.mu-controls button:disabled { opacity: .35; cursor: default; }
+.mu-sessions { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 16px; }
+.mu-chip { height: 28px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--stroke); background: transparent; font-size: 12px; }
+.mu-chip.on { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+.sp-card { max-width: 900px; display: flex; flex-direction: column; gap: 12px; }
+.sp-head { display: flex; align-items: center; gap: 10px; }
+.sp-head h3 { margin: 0; display: flex; align-items: center; gap: 8px; }
+.sp-logo { width: 20px; height: 20px; border-radius: 50%; background: #1db954; display: inline-block; }
+.sp-user { color: var(--text-2); font-size: 13px; }
+.sp-setup p { margin: 0 0 8px; }
+.sp-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; }
+.sp-steps a { color: var(--accent); }
+.sp-steps .me-row { margin-top: 6px; }
+.sp-steps input, .sp-search input { flex: 1; height: 32px; padding: 0 10px; border-radius: 5px; border: 1px solid var(--stroke); background: var(--card); color: var(--text); font: inherit; user-select: text; }
+.sp-sub { margin: 4px 0 0; font-size: 13px; color: var(--text-2); font-weight: 600; }
+.sp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.sp-tile { display: flex; flex-direction: column; gap: 4px; padding: 8px; border-radius: 8px; border: none; background: var(--subtle); text-align: left; cursor: pointer; min-width: 0; }
+.sp-tile:hover { background: var(--subtle-2); }
+.sp-art { aspect-ratio: 1; border-radius: 6px; overflow: hidden; background: var(--subtle-2); display: grid; place-items: center; font-size: 32px; color: var(--text-2); }
+.sp-art img { width: 100%; height: 100%; object-fit: cover; }
+.sp-art.liked { background: linear-gradient(135deg, #450af5, #8e8ee5); color: #fff; }
+.sp-name { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-meta { font-size: 12px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-msg { margin: 0; color: var(--text-2); font-size: 13px; }
+.sp-msg.error { color: #e8455d; }
+#me-music { width: 100%; height: 32px; padding: 0 10px; border-radius: 5px; border: 1px solid var(--stroke); background: var(--card); color: var(--text); font: inherit; }

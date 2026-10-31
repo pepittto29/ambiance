@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https://*.scdn.co https://*.spotifycdn.com; style-src 'self' 'unsafe-inline'; script-src 'self'">
   <title>Ambiance</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -16,6 +16,7 @@
     <nav id="nav">
       <button class="nav-item active" data-page="modes"><span class="ico">&#xE945;</span><span class="lbl">Modes</span></button>
       <button class="nav-item" data-page="sounds"><span class="ico">&#xEC4F;</span><span class="lbl">Sons</span></button>
+      <button class="nav-item" data-page="music"><span class="ico">&#xE8D6;</span><span class="lbl">Musique</span></button>
       <button class="nav-item" data-page="catalog"><span class="ico">&#xE753;</span><span class="lbl">Catalogue</span></button>
       <button class="nav-item" data-page="tasks"><span class="ico">&#xE73A;</span><span class="lbl">Tâches</span></button>
       <button class="nav-item" data-page="focus"><span class="ico">&#xE916;</span><span class="lbl">Focus</span></button>
@@ -36,6 +37,61 @@
           <button id="btn-new-mode" class="btn"><span class="ico">&#xE710;</span> Créer un mode</button>
         </header>
         <div id="mode-grid" class="mode-grid"></div>
+      </section>
+
+      <section id="page-music" class="page">
+        <header class="page-head">
+          <div>
+            <h1>Musique</h1>
+            <p class="sub">Ambiance détecte la musique de n'importe quelle application (Spotify, Deezer, YouTube Music, Apple Music…) grâce aux contrôles média de Windows.</p>
+          </div>
+        </header>
+        <div class="card mu-now">
+          <img id="mu-art" class="mu-art" alt="">
+          <div class="mu-info">
+            <div id="mu-app" class="mu-app"></div>
+            <div id="mu-title" class="mu-title">Rien ne joue pour l'instant</div>
+            <div id="mu-artist" class="mu-artist">Lancez de la musique dans n'importe quelle application : elle apparaîtra ici.</div>
+            <div class="mu-time"><span id="mu-pos"></span><div class="mu-bar"><i id="mu-bar"></i></div><span id="mu-dur"></span></div>
+            <div class="mu-controls">
+              <button id="mu-prev" class="icon-btn ico" title="Précédent">&#xE892;</button>
+              <button id="mu-toggle" class="mu-play ico" title="Lecture / Pause">&#xE768;</button>
+              <button id="mu-next" class="icon-btn ico" title="Suivant">&#xE893;</button>
+            </div>
+          </div>
+        </div>
+        <div id="mu-sessions" class="mu-sessions"></div>
+
+        <div class="card sp-card">
+          <div class="sp-head">
+            <h3><span class="sp-logo"></span> Spotify</h3>
+            <span class="grow"></span>
+            <span id="sp-user" class="sp-user"></span>
+            <button id="sp-disconnect" class="btn hidden">Déconnecter</button>
+          </div>
+
+          <div id="sp-setup" class="sp-setup hidden">
+            <p>Connectez votre compte pour parcourir vos playlists et lancer votre musique depuis Ambiance ou depuis un mode. <b>Spotify Premium</b> est nécessaire pour piloter la lecture.</p>
+            <p class="s-sub">Spotify demande à chaque utilisateur d'une application non commerciale de créer son propre identifiant. C'est gratuit et ça ne se fait qu'une fois :</p>
+            <ol class="sp-steps">
+              <li>Ouvrez le <a href="#" id="sp-dashboard">tableau de bord développeur de Spotify</a> et connectez-vous avec votre compte habituel.</li>
+              <li>Cliquez sur <b>Create app</b>. Nom et description : ce que vous voulez (ex. « Ambiance »).</li>
+              <li>Dans <b>Redirect URIs</b>, collez cette adresse puis cliquez sur <b>Add</b> :
+                <div class="me-row"><input id="sp-redirect" type="text" readonly><button id="sp-copy" class="btn">Copier</button></div></li>
+              <li>Cochez <b>Web API</b>, acceptez les conditions et enregistrez.</li>
+              <li>Copiez le <b>Client ID</b> affiché et collez-le ici :
+                <div class="me-row"><input id="sp-client" type="text" placeholder="Client ID (32 caractères)" maxlength="40" spellcheck="false"><button id="sp-connect" class="btn accent">Connecter Spotify</button></div></li>
+            </ol>
+          </div>
+
+          <div id="sp-lib" class="hidden">
+            <form id="sp-search-form" class="me-row sp-search"><input id="sp-search" type="search" placeholder="Rechercher un titre, un album, une playlist…"><button class="btn">Rechercher</button></form>
+            <div id="sp-results" class="sp-grid hidden"></div>
+            <h4 class="sp-sub">Votre bibliothèque</h4>
+            <div id="sp-grid" class="sp-grid"></div>
+          </div>
+          <p id="sp-msg" class="sp-msg hidden"></p>
+        </div>
       </section>
 
       <section id="page-sounds" class="page">
@@ -384,6 +440,12 @@
           <div class="me-row"><input id="me-app-add" type="text" placeholder="Autre application (ex. discord.exe)"><button id="me-app-add-btn" class="btn">Ajouter</button></div>
         </div>
         <div class="me-section">
+          <h4>Musique du mode</h4>
+          <input id="me-music" type="text" list="me-music-list" placeholder="Lien Spotify, Deezer ou YouTube Music (ou choisissez une playlist)">
+          <datalist id="me-music-list"></datalist>
+          <p class="s-sub">Avec Spotify connecté, la musique démarre toute seule ; sinon le lien s'ouvre dans l'application.</p>
+        </div>
+        <div class="me-section">
           <h4>Ouvrir au lancement</h4>
           <textarea id="me-launch" rows="3" placeholder="Un site ou un programme par ligne, ex. https://open.spotify.com"></textarea>
         </div>
@@ -419,5 +481,6 @@
   <script src="tasks-ui.js"></script>
   <script src="premium.js"></script>
   <script src="modes-ui.js"></script>
+  <script src="music-ui.js"></script>
 </body>
 </html>

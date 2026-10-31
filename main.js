@@ -8,6 +8,8 @@ const winSettings = require('./win-settings');
 const modes = require('./modes');
 const tasks = require('./tasks');
 const clock = require('./clock');
+const music = require('./music');
+const spotify = require('./spotify');
 
 // Les erreurs du processus principal sont consignées dans %APPDATA%\Ambiance\main.log.
 function logError(err) {
@@ -76,6 +78,14 @@ function updateTray() {
     },
     { label: 'Donner à manger', enabled: config.pet, click: () => pet.giveFood() },
     { label: 'Où en sont mes tâches ?', enabled: config.pet, click: () => pet.showInfo() },
+    {
+      label: 'Musique',
+      submenu: [
+        { label: 'Lecture / Pause', click: () => music.command('toggle') },
+        { label: 'Suivant', click: () => music.command('next') },
+        { label: 'Précédent', click: () => music.command('prev') },
+      ],
+    },
     { label: 'Horloge', type: 'checkbox', checked: !!config.clock.show, click: (item) => setClock({ show: item.checked }) },
     { type: 'separator' },
     { label: 'Quitter', click: () => { quitting = true; app.quit(); } },
@@ -107,15 +117,28 @@ function activateMode(id, { notify = false } = {}) {
   pet.setOptions({ energy: mode.pet.energy });
   if (mode.minimize.length) { try { winSettings.minimizeApps(mode.minimize); } catch (e) { logError(e); } }
   for (const item of mode.launch) {
-    if (/^https?:\/\//i.test(item)) shell.openExternal(item);
+    if (EXTERNAL.test(item)) shell.openExternal(item);
     else if (item) shell.openPath(item);
   }
+  if (mode.music) playMusic(mode.music);
   config.activeMode = isNormal ? null : mode.id;
   saveConfig();
   updateTray();
   if (win) win.webContents.send('mode-changed', mode);
   if (notify && Notification.isSupported()) new Notification({ title: 'Ambiance', body: `Mode ${mode.name}`, silent: true }).show();
   return mode;
+}
+
+// Liens ouverts par le navigateur ou l'application concernée (Spotify, Deezer…).
+const EXTERNAL = /^(https?|spotify|deezer):/i;
+
+// La musique d'un mode : par le compte Spotify connecté si possible, sinon en ouvrant le lien.
+async function playMusic(link) {
+  if (spotify.isSpotify(link) && spotify.state().connected) {
+    try { await spotify.play(link); return; } catch (e) { logError(e); }
+  }
+  const target = link === 'liked' ? 'spotify:collection:tracks' : spotify.toUri(link);
+  if (EXTERNAL.test(target)) shell.openExternal(target);
 }
 
 function cycleMode() {
@@ -127,6 +150,22 @@ function cycleMode() {
 function modesState() {
   return { modes: modes.list(config.modes), active: config.activeMode || 'normal' };
 }
+
+// ---------- Musique ----------
+music.events.on('state', s => { if (win && !win.isDestroyed()) win.webContents.send('music-state', s); });
+ipcMain.handle('music-watch', (_e, on) => music.watch(on));
+ipcMain.handle('music-command', (_e, cmd, appId) => music.command(cmd, appId));
+// Les erreurs Spotify sont renvoyées comme valeur : un message lisible plutôt qu'une exception IPC.
+const safe = fn => async (...args) => { try { return { ok: true, data: await fn(...args) }; } catch (e) { return { ok: false, error: e.message, code: e.code }; } };
+ipcMain.handle('spotify-state', () => spotify.state());
+ipcMain.handle('spotify-client', safe((_e, id) => spotify.setClientId(id)));
+ipcMain.handle('spotify-connect', safe(() => spotify.connect().then(s => { showWindow(); return s; })));
+ipcMain.handle('spotify-disconnect', () => spotify.disconnect());
+ipcMain.handle('spotify-library', safe(() => spotify.library()));
+ipcMain.handle('spotify-search', safe((_e, q) => spotify.search(String(q || '').slice(0, 100))));
+ipcMain.handle('spotify-play', safe((_e, link) => spotify.play(link)));
+ipcMain.handle('play-music', (_e, link) => playMusic(String(link || '')));
+ipcMain.handle('open-spotify-dashboard', () => shell.openExternal('https://developer.spotify.com/dashboard'));
 
 // ---------- Tâches ----------
 ipcMain.handle('tasks-get', () => tasks.list());
@@ -356,6 +395,7 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     app.setAppUserModelId('com.pierre.ambiance');
     loadConfig();
+    spotify.init();
     // Remet Windows d'origine si l'application avait été fermée brutalement pendant un mode.
     try { winSettings.init(); } catch (e) { logError(e); }
     config.activeMode = null;
@@ -373,6 +413,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('before-quit', () => {
     quitting = true;
     pet.stop();
+    music.stop();
     // En quittant, tous les réglages de Windows modifiés par un mode sont restaurés.
     try { winSettings.restoreAll(); } catch (e) { logError(e); }
     config.activeMode = null;

@@ -25,6 +25,13 @@ et l'application apparaît dans « Applications installées » de Windows (dési
   par double-clic, filtres et barre de progression. Partagée avec la page Focus et le compagnon.
 - **Le compagnon et vos tâches** : double-cliquez sur lui pour voir où vous en êtes (progression, prochaine tâche,
   bouton « C'est fait »). Il fête chaque tâche terminée et vous fait de petits rappels (sauf en mode calme).
+- **Musique** : Ambiance affiche ce que joue **n'importe quelle application** (Spotify, Deezer, YouTube Music,
+  Apple Music, un navigateur…) avec la pochette, et la pilote (lecture/pause, suivant, précédent), aussi depuis
+  l'icône près de l'horloge. Chaque mode peut lancer sa musique (lien Spotify, Deezer, YouTube Music…).
+- **Connexion Spotify** (facultative) : parcourez vos playlists et vos titres likés, cherchez et lancez de la musique
+  depuis Ambiance ou automatiquement avec un mode. Spotify impose à chaque utilisateur de créer son propre
+  identifiant (gratuit, 5 minutes, guidé dans l'application) ; le pilotage demande Spotify Premium.
+  Les jetons de connexion sont chiffrés par Windows et restent sur votre PC.
 - **Horloge de bureau** pixel art, déplaçable, toujours visible, avec la date ou le temps restant d'une session Focus.
 - **Vrais enregistrements** (licence CC0, domaine public) : pluie, orage, plage, vent, feu de cheminée, café,
   oiseaux, ruisseau, bruit brun… plus une vingtaine d'ambiances dans le **Catalogue** (forêt tropicale, rivière,
@@ -59,7 +66,7 @@ et l'application apparaît dans « Applications installées » de Windows (dési
 - **Zone de notification** : la croix coupe le son et range l'application près de l'horloge ; le compagnon continue.
   Clic droit sur l'icône : lecture/pause, afficher/masquer le compagnon, donner à manger, quitter.
 - **Fluent Design** : effet Mica sous Windows 11, thème clair/sombre et couleur d'accent du système.
-- Raccourci **Espace** = lecture/pause. Option « Lancer avec Windows ». Aucun compte, rien n'est envoyé en ligne.
+- Raccourci **Espace** = lecture/pause. Option « Lancer avec Windows ». Aucun compte Ambiance ; seule la connexion Spotify, si vous l'activez, communique avec Spotify.
 
 ## Crédits sonores
 

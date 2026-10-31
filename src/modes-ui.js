@@ -41,6 +41,7 @@
     if (m.win.keepAwake) out.push('☕ pas de veille');
     if (m.win.wallpaper) out.push('🖼️ fond d\'écran');
     if (m.minimize.length) out.push(`📵 ${m.minimize.length} applis réduites`);
+    if (m.music) out.push('🎵 musique');
     if (m.launch.length) out.push(`🚀 ${m.launch.length} à ouvrir`);
     return out;
   }
@@ -126,7 +127,7 @@
       sound: { mix: null }, focusTimer: false, pet: { energy: 'normal' },
       screen: { grayscale: false, warmth: 0, dim: 0 },
       win: { theme: null, notifications: null, hideIcons: null, autoHideTaskbar: null, power: null, wallpaper: null, keepAwake: false },
-      minimize: [], launch: [],
+      minimize: [], launch: [], music: '',
     }));
     $('#me-title').textContent = isNew ? 'Créer un mode' : `Modifier « ${editing.name} »`;
     $('#me-name').value = editing.name;
@@ -148,6 +149,8 @@
     $('#me-awake').checked = !!editing.win.keepAwake;
     $('#me-wall-name').textContent = editing.win.wallpaper ? editing.win.wallpaper.split(/[\\/]/).pop() : 'ne pas changer';
     $('#me-launch').value = editing.launch.join('\n');
+    $('#me-music').value = editing.music || '';
+    if (window.Music) Music.fillDatalist($('#me-music-list'));
     $('#me-delete').classList.toggle('hidden', isNew || mode.builtin);
     $('#me-reset').classList.toggle('hidden', isNew || !mode.builtin);
     for (const r of document.querySelectorAll('#mode-editor input[type=range]')) r.style.setProperty('--p', (r.value / r.max * 100) + '%');
@@ -180,6 +183,7 @@
     m.win.hideIcons = $('#me-icons').checked ? true : null;
     m.win.autoHideTaskbar = $('#me-taskbar').checked ? true : null;
     m.win.keepAwake = $('#me-awake').checked;
+    m.music = $('#me-music').value.trim();
     m.launch = $('#me-launch').value.split('\n').map(x => x.trim()).filter(Boolean);
     return m;
   }
