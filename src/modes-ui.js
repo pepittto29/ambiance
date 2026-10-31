@@ -39,7 +39,11 @@
     if (m.win.theme) out.push(m.win.theme === 'dark' ? '🌙 sombre' : '☀️ clair');
     if (m.win.power) out.push({ saver: '🔋 économie', balanced: '⚖️ équilibré', perf: '⚡ performances' }[m.win.power]);
     if (m.win.keepAwake) out.push('☕ pas de veille');
-    if (m.win.wallpaper) out.push('🖼️ fond d\'écran');
+    if (/^retro:/.test(m.win.wallpaper || '')) out.push('👾 fond pixel');
+    else if (m.win.wallpaper) out.push('🖼️ fond d\'écran');
+    if (m.win.cursors) out.push('🖱️ curseurs pixel');
+    if (m.win.accent) out.push('🎨 accent');
+    if (m.frame) out.push(m.frame === 'crt' ? '📺 écran cathodique' : '🖼️ cadre pixel');
     if (m.minimize.length) out.push(`📵 ${m.minimize.length} applis réduites`);
     if (m.music) out.push('🎵 musique');
     if (m.launch.length) out.push(`🚀 ${m.launch.length} à ouvrir`);
@@ -136,8 +140,8 @@
       id: null, name: 'Mon mode', emoji: '✨', colors: ['#00897b', '#00302b'], desc: '',
       sound: { mix: null }, focusTimer: false, pet: { energy: 'normal' },
       screen: { grayscale: false, warmth: 0, dim: 0 },
-      win: { theme: null, notifications: null, hideIcons: null, autoHideTaskbar: null, power: null, wallpaper: null, keepAwake: false },
-      minimize: [], launch: [], music: '',
+      win: { theme: null, notifications: null, hideIcons: null, autoHideTaskbar: null, power: null, wallpaper: null, cursors: null, accent: null, keepAwake: false },
+      minimize: [], launch: [], music: '', frame: '',
     }));
     $('#me-title').textContent = isNew ? 'Créer un mode' : `Modifier « ${editing.name} »`;
     $('#me-name').value = editing.name;
@@ -157,7 +161,11 @@
     $('#me-icons').checked = !!editing.win.hideIcons;
     $('#me-taskbar').checked = !!editing.win.autoHideTaskbar;
     $('#me-awake').checked = !!editing.win.keepAwake;
-    $('#me-wall-name').textContent = editing.win.wallpaper ? editing.win.wallpaper.split(/[\\/]/).pop() : 'ne pas changer';
+    showWallpaper();
+    $('#me-cursors').checked = editing.win.cursors === 'retro';
+    $('#me-accent-on').checked = !!editing.win.accent;
+    $('#me-accent').value = editing.win.accent || '#ff4fa3';
+    $('#me-frame').value = editing.frame || '';
     $('#me-launch').value = editing.launch.join('\n');
     $('#me-music').value = editing.music || '';
     if (window.Music) Music.fillDatalist($('#me-music-list'));
@@ -193,6 +201,9 @@
     m.win.hideIcons = $('#me-icons').checked ? true : null;
     m.win.autoHideTaskbar = $('#me-taskbar').checked ? true : null;
     m.win.keepAwake = $('#me-awake').checked;
+    m.win.cursors = $('#me-cursors').checked ? 'retro' : null;
+    m.win.accent = $('#me-accent-on').checked ? $('#me-accent').value : null;
+    m.frame = $('#me-frame').value;
     m.music = $('#me-music').value.trim();
     m.launch = $('#me-launch').value.split('\n').map(x => x.trim()).filter(Boolean);
     return m;
@@ -204,16 +215,49 @@
   for (const r of document.querySelectorAll('#mode-editor input[type=range]')) {
     r.addEventListener('input', () => r.style.setProperty('--p', (r.value / r.max * 100) + '%'));
   }
+  // Fond d'écran : image de l'utilisateur ou fond pixel dessiné par l'application (« retro:… »).
+  let retroWalls = [];
+  function showWallpaper() {
+    const w = editing.win.wallpaper || '';
+    const retroId = (/^retro:(\w+)$/.exec(w) || [])[1];
+    const scene = retroWalls.find(x => x.id === retroId);
+    $('#me-wall-name').textContent = !w ? 'ne pas changer' : retroId ? `pixel « ${scene ? scene.name : retroId} »` : w.split(/[\\/]/).pop();
+    for (const b of document.querySelectorAll('.me-retro-wall')) b.classList.toggle('on', b.dataset.id === (retroId || ''));
+  }
+  async function loadRetroWalls() {
+    retroWalls = await api.retroPreviews();
+    const none = el('button', 'me-retro-wall');
+    none.dataset.id = '';
+    none.append(el('div', 'none', 'Aucun'), el('span', null, 'Pas de fond pixel'));
+    none.addEventListener('click', () => {
+      if (/^retro:/.test(editing.win.wallpaper || '')) editing.win.wallpaper = null;
+      showWallpaper();
+    });
+    const tiles = retroWalls.map(w => {
+      const b = el('button', 'me-retro-wall');
+      b.dataset.id = w.id;
+      const img = el('img');
+      img.src = w.src;
+      img.alt = '';
+      b.append(img, el('span', null, w.name));
+      b.addEventListener('click', () => { editing.win.wallpaper = `retro:${w.id}`; showWallpaper(); });
+      return b;
+    });
+    $('#me-retro-walls').replaceChildren(none, ...tiles);
+    if (editing) showWallpaper();
+  }
   $('#me-wall-pick').addEventListener('click', async () => {
     const file = await api.pickImage();
     if (!file) return;
     editing.win.wallpaper = file;
-    $('#me-wall-name').textContent = file.split(/[\\/]/).pop();
+    showWallpaper();
   });
   $('#me-wall-clear').addEventListener('click', () => {
     editing.win.wallpaper = null;
-    $('#me-wall-name').textContent = 'ne pas changer';
+    showWallpaper();
   });
+  $('#me-accent').addEventListener('input', () => { $('#me-accent-on').checked = true; });
+  $('#me-windhawk').addEventListener('click', e => { e.preventDefault(); api.openWindhawk(); });
   const addApp = () => {
     const v = $('#me-app-add').value.trim().toLowerCase();
     if (!v) return;
@@ -247,4 +291,5 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && editing) closeEditor(); });
 
   api.getModes().then(s => { state = s; render(); preloadSounds(); });
+  loadRetroWalls();
 })();

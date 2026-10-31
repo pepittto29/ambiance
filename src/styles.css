@@ -735,3 +735,13 @@ details.credits summary { cursor: pointer; padding: 10px 0; }
 .sp-msg { margin: 0; color: var(--text-2); font-size: 13px; }
 .sp-msg.error { color: #e8455d; }
 #me-music { width: 100%; height: 32px; padding: 0 10px; border-radius: 5px; border: 1px solid var(--stroke); background: var(--card); color: var(--text); font: inherit; }
+
+/* ---------- Mode Rétro (éditeur) ---------- */
+.me-retro-walls { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+.me-retro-wall { padding: 0; border: 2px solid transparent; border-radius: 8px; overflow: hidden; background: var(--card); cursor: pointer; color: inherit; font: inherit; text-align: left; }
+.me-retro-wall img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; image-rendering: pixelated; }
+.me-retro-wall .none { display: grid; place-items: center; aspect-ratio: 16 / 9; font-size: 12px; opacity: .7; background: var(--stroke); }
+.me-retro-wall span { display: block; padding: 4px 6px; font-size: 12px; }
+.me-retro-wall.on { border-color: var(--accent); }
+.me-accent { align-items: center; }
+.me-accent input[type=color] { width: 44px; height: 28px; padding: 0; border: 0; background: none; }

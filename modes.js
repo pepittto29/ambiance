@@ -5,11 +5,13 @@
 //   focusTimer     : lance une session Focus (Pomodoro)
 //   pet.energy     : 'calme' | 'normal' | 'joueur'
 //   screen         : filtres de couleur { grayscale, warmth 0..1, dim 0..1 }
-//   win            : réglages Windows (null = laisser tel quel)
+//   win            : réglages Windows (null = laisser tel quel) ; wallpaper peut valoir « retro:coucher »
+//                    (fond pixel dessiné par l'application), cursors « retro », accent '#rrggbb'
+//   frame          : cadre décoratif sur l'écran : '' | 'pixel' | 'crt'
 //   minimize       : applications à réduire en entrant dans le mode
 //   launch         : sites ou applications à ouvrir en entrant dans le mode
 //   music          : musique à lancer (lien ou URI Spotify, « liked » pour les titres likés, lien Deezer, YouTube Music…)
-const BLANK_WIN = { theme: null, notifications: null, hideIcons: null, autoHideTaskbar: null, power: null, wallpaper: null, keepAwake: false };
+const BLANK_WIN = { theme: null, notifications: null, hideIcons: null, autoHideTaskbar: null, power: null, wallpaper: null, cursors: null, accent: null, keepAwake: false };
 
 const DEFAULT_MODES = [
   {
@@ -48,6 +50,16 @@ const DEFAULT_MODES = [
     win: { ...BLANK_WIN, theme: 'dark', power: 'perf' },
     minimize: [], launch: [],
   },
+  {
+    id: 'retro', builtin: true, name: 'Rétro', emoji: '👾', colors: ['#ff4fa3', '#2a0f45'],
+    desc: 'Retour aux années 8 bits : fond et curseurs en pixels, musique chiptune, cadre d\'époque.',
+    sound: { mix: { chiptune: 0.5 } }, focusTimer: false,
+    pet: { energy: 'joueur' },
+    screen: { grayscale: false, warmth: 0, dim: 0 },
+    win: { ...BLANK_WIN, theme: 'dark', wallpaper: 'retro:coucher', cursors: 'retro', accent: '#ff4fa3' },
+    frame: 'pixel',
+    minimize: [], launch: [],
+  },
 ];
 
 // Complète un mode enregistré avec les champs manquants (anciennes versions, modes créés).
@@ -64,6 +76,7 @@ function normalize(m) {
     minimize: m.minimize || base.minimize || [],
     launch: m.launch || base.launch || [],
     music: typeof m.music === 'string' ? m.music : (base.music || ''),
+    frame: typeof m.frame === 'string' ? m.frame : (base.frame || ''),
   };
 }
 

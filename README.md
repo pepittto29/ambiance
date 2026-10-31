@@ -15,12 +15,17 @@ et l'application apparaît dans « Applications installées » de Windows (dési
 
 ## Fonctionnalités
 
-- **Modes** (page d'accueil) : Normal, Focus, Détente, Fun, et vos propres modes. Un clic change l'ambiance sonore,
+- **Modes** (page d'accueil) : Normal, Focus, Détente, Fun, Rétro, et vos propres modes. Un clic change l'ambiance sonore,
   l'énergie du compagnon et des réglages de Windows : noir et blanc, écran chaud (moins de lumière bleue),
   atténuation, thème sombre/clair, notifications coupées, icônes du bureau masquées, barre des tâches masquée,
   mode d'alimentation, fond d'écran, mise en veille empêchée, applications distrayantes réduites, sites ou
   programmes à ouvrir. **Tout est restauré** en quittant le mode ou l'application, même après un plantage.
   Changement rapide : icône près de l'horloge ou **Ctrl + Alt + M**.
+- **Mode Rétro** : fonds d'écran en pixel art dessinés par l'application (coucher de soleil, nuit étoilée,
+  grand jour, arcade), curseurs en pixels, couleur d'accent de Windows au choix, musique **chiptune** ou
+  **salle d'arcade** générée en direct, et cadre décoratif sur l'écran (bordure en pixels ou vieil écran
+  cathodique). Chaque élément peut s'ajouter à n'importe quel mode, et tout est remis d'origine en quittant.
+  La barre des tâches peut aussi changer d'apparence avec [Windhawk](https://windhawk.net/) (facultatif).
 - **Tâches** : liste avec priorités (haute, normale, basse), échéances (en rouge si en retard), modification
   par double-clic, filtres et barre de progression. Partagée avec la page Focus et le compagnon.
 - **Le compagnon et vos tâches** : double-cliquez sur lui pour voir où vous en êtes (progression, prochaine tâche,

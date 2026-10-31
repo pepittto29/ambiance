@@ -35,7 +35,20 @@ const SHAppBarMessage = shell32.func('uintptr_t __stdcall SHAppBarMessage(uint32
 // Registre lu et écrit directement (bien plus rapide que de lancer reg.exe à chaque réglage).
 const RegGetValueW = advapi32.func('long __stdcall RegGetValueW(uintptr_t key, str16 sub, str16 name, uint32_t flags, void *type, _Out_ uint32_t *data, _Inout_ uint32_t *size)');
 const RegSetKeyValueW = advapi32.func('long __stdcall RegSetKeyValueW(uintptr_t key, str16 sub, str16 name, uint32_t type, _In_ uint32_t *data, uint32_t size)');
+const RegGetStringW = advapi32.func('long __stdcall RegGetValueW(uintptr_t key, str16 sub, str16 name, uint32_t flags, _Out_ uint32_t *type, void *data, _Inout_ uint32_t *size)');
+const RegSetStringW = advapi32.func('long __stdcall RegSetKeyValueW(uintptr_t key, str16 sub, str16 name, uint32_t type, str16 data, uint32_t size)');
+const RegDeleteKeyValueW = advapi32.func('long __stdcall RegDeleteKeyValueW(uintptr_t key, str16 sub, str16 name)');
 const HKCU = 0x80000001;
+// Couleur d'accent : fonctions de uxtheme (celles qu'utilisent les Paramètres de Windows).
+let accentApi = null;
+try {
+  const ux = koffi.load('uxtheme.dll');
+  const PREF = koffi.struct('IMMERSIVE_COLOR_PREFERENCE', { color1: 'uint32', color2: 'uint32' });
+  accentApi = {
+    get: ux.func('long __stdcall GetUserColorPreference(_Out_ IMMERSIVE_COLOR_PREFERENCE *p, bool reload)'),
+    set: ux.func('__stdcall', 122, 'long', [koffi.pointer(PREF), 'bool']), // SetUserColorPreference
+  };
+} catch { /* couleur d'accent indisponible */ }
 const OpenProcess = kernel32.func('void * __stdcall OpenProcess(uint32_t access, bool inherit, uint32_t pid)');
 const CloseHandle = kernel32.func('bool __stdcall CloseHandle(void *h)');
 const QueryFullProcessImageNameW = kernel32.func('bool __stdcall QueryFullProcessImageNameW(void *h, uint32_t flags, void *buf, _Inout_ uint32_t *size)');
@@ -65,9 +78,11 @@ function saveJournal() {
   } catch { /* ignoré */ }
 }
 
-// ---------- Registre (via reg.exe) ----------
+// ---------- Registre ----------
 const PERSONALIZE = 'Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize';
 const PUSH = 'Software\\Microsoft\\Windows\\CurrentVersion\\PushNotifications';
+const CURSORS = 'Control Panel\\Cursors';
+const CURSOR_NAMES = ['Arrow', 'Hand', 'IBeam', 'Wait', 'AppStarting'];
 
 function regGet(key, name) {
   const out = [0];
@@ -79,9 +94,41 @@ function regSet(key, name, value) {
   const err = RegSetKeyValueW(HKCU, key, name, 4, [value >>> 0], 4);
   if (err !== 0) throw new Error(`Registre inaccessible (${err})`);
 }
+// Texte, en gardant les variables comme %SystemRoot% telles quelles. null si la valeur n'existe pas.
+function regGetString(key, name) {
+  const buf = Buffer.alloc(2048);
+  const size = [buf.length];
+  // 0x2 | 0x4 : REG_SZ ou REG_EXPAND_SZ ; 0x10000000 : ne pas développer les variables.
+  if (RegGetStringW(HKCU, key, name, 0x10000006, [0], buf, size) !== 0) return null;
+  return buf.toString('utf16le', 0, size[0]).replace(/\0.*$/s, '');
+}
+// null supprime la valeur (elle n'existait pas avant le mode).
+function regSetString(key, name, value) {
+  if (value === null) { RegDeleteKeyValueW(HKCU, key, name); return; }
+  const s = String(value);
+  const err = RegSetStringW(HKCU, key, name, 2, s, (s.length + 1) * 2); // REG_EXPAND_SZ
+  if (err !== 0) throw new Error(`Registre inaccessible (${err})`);
+}
+
+// Les appels qui préviennent tout le système (fond d'écran, curseurs, couleurs…) peuvent prendre
+// une seconde : ils tournent en arrière-plan, sauf en quittant où l'on attend qu'ils soient finis.
+let blocking = false;
+let pending = 0;
+let settled = [];
+function call(fn, ...args) {
+  if (blocking) return fn(...args);
+  pending++;
+  fn.async(...args, (err) => {
+    if (err) console.error('Appel Windows impossible :', err.message);
+    if (--pending === 0) { settled.forEach(r => r()); settled = []; }
+  });
+}
+// En quittant, il faut attendre ces appels : les couper net fait planter la fermeture.
+const busy = () => pending > 0;
+const settle = (ms) => new Promise(r => { settled.push(r); setTimeout(r, ms); });
 // Prévient les autres applications du changement, sans bloquer Ambiance si l'une d'elles tarde à répondre.
 function broadcast(area) {
-  SendMessageTimeoutW.async(0xffff, 0x001a, 0, area, 0x0002, 1000, [0], () => {});
+  call(SendMessageTimeoutW, 0xffff, 0x001a, 0, area, 0x0002, blocking ? 200 : 1000, [0]);
 }
 
 // ---------- Chaque réglage : lire / écrire ----------
@@ -153,7 +200,42 @@ const SETTINGS = {
       SystemParametersInfoGet(0x0073, 520, buf, 0);
       return buf.toString('utf16le').replace(/\0.*$/s, '');
     },
-    set: (file) => { SystemParametersInfoSet(0x0014, 0, file || '', 0x01 | 0x02); },
+    set: (file) => { call(SystemParametersInfoSet, 0x0014, 0, file || '', 0x01 | 0x02); },
+  },
+  // Curseurs : { Arrow: fichier, Hand: fichier, … } ; le jeu d'origine est noté puis remis.
+  cursors: {
+    get: () => {
+      const out = { scheme: regGet(CURSORS, 'Scheme Source') };
+      for (const n of CURSOR_NAMES) out[n] = regGetString(CURSORS, n);
+      return out;
+    },
+    set: (files) => {
+      for (const n of CURSOR_NAMES) if (n in files) regSetString(CURSORS, n, files[n]);
+      // Scheme Source 0 = jeu personnalisé (sinon Windows peut reprendre son jeu à la prochaine session).
+      regSet(CURSORS, 'Scheme Source', files.scheme ?? 0);
+      call(SystemParametersInfoSet, 0x0057, 0, null, 0x01 | 0x02); // SPI_SETCURSORS : recharge les curseurs
+    },
+  },
+  // Couleur d'accent : '#rrggbb', ou les deux couleurs d'origine { color1, color2 } pour la remettre.
+  accent: {
+    get: () => {
+      if (!accentApi) throw new Error('Couleur d\'accent indisponible');
+      const p = {};
+      accentApi.get(p, false);
+      return { color1: p.color1, color2: p.color2 };
+    },
+    set: (v) => {
+      if (!accentApi) throw new Error('Couleur d\'accent indisponible');
+      let pref = v;
+      if (typeof v === 'string') {
+        const n = parseInt(v.replace('#', ''), 16);
+        const cur = {};
+        accentApi.get(cur, false);
+        // Windows range les couleurs en 0xAABBGGRR.
+        pref = { color1: cur.color1, color2: (0xff000000 | ((n & 255) << 16) | (n & 0xff00) | (n >> 16)) >>> 0 };
+      }
+      call(accentApi.set, pref, true);
+    },
   },
 };
 
@@ -177,8 +259,8 @@ function applyWindows(win = {}) {
 }
 
 function restoreAll() {
-  applyWindows({});
-  setScreen({});
+  blocking = true;
+  try { applyWindows({}); setScreen({}); } finally { blocking = false; }
 }
 
 function setKeepAwake(on) {
@@ -262,4 +344,4 @@ function init() {
   if (Object.keys(journal).length) applyWindows({});
 }
 
-module.exports = { init, applyWindows, restoreAll, setScreen, runningApps, minimizeApps, SETTINGS };
+module.exports = { init, applyWindows, restoreAll, busy, settle, setScreen, runningApps, minimizeApps, SETTINGS };

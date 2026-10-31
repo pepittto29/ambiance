@@ -16,6 +16,8 @@ const SOUNDS = [
   { id: 'fan', name: 'Ventilateur', emoji: '🌀', colors: ['#8e9eab', '#3b4a57'], builtin: true },
   { id: 'white', name: 'Bruit blanc', emoji: '⚪', colors: ['#b8c6cc', '#55707d'], builtin: true },
   { id: 'pink', name: 'Bruit rose', emoji: '🌸', colors: ['#f29bbd', '#8e3b5f'], builtin: true },
+  { id: 'chiptune', name: 'Chiptune', emoji: '👾', colors: ['#ff4fa3', '#2a0f45'], builtin: true, scene: 'night' },
+  { id: 'arcade', name: 'Salle d\'arcade', emoji: '🕹️', colors: ['#7c4dff', '#140c3a'], builtin: true },
   { id: 'brown', name: 'Bruit brun', emoji: '🟤', colors: ['#a1887f', '#4e342e'], builtin: true, file: 'whitenoise.ogg', credit: 'Brown Noise by theundecided -- https://freesound.org/s/165056/' },
   // Catalogue
   { id: 'rainforest', name: 'Forêt tropicale', emoji: '🌴', colors: ['#3f9b5a', '#0f3320'], catalog: true, scene: 'rain', file: 'Rainforest.ogg', desc: 'Pluie tiède sur la canopée.', credit: 'Rain Sound and Rainforest.mp3 by INNORECORDS -- https://freesound.org/s/457447/' },
@@ -143,6 +145,17 @@ const Engine = (() => {
         for (let i = 0; i < nodes.length - 1; i++) nodes[i].connect(nodes[i + 1]);
         return nodes[nodes.length - 1];
       },
+      // Appelle fn toutes les ms millisecondes tant que le son joue.
+      repeat(ms, fn) {
+        const rec = { t: 0 };
+        const loop = () => {
+          if (v.stopped) return;
+          fn();
+          rec.t = setTimeout(loop, ms);
+        };
+        loop();
+        v.timers.push(rec);
+      },
       // Appelle fn à intervalles aléatoires entre min et max millisecondes.
       every(min, max, fn) {
         const rec = { t: 0 };
@@ -183,7 +196,88 @@ const Engine = (() => {
     return { v, h };
   }
 
+  // Onde « carrée » étroite des vieilles consoles (rapport cyclique duty).
+  const pulses = {};
+  function pulse(duty) {
+    if (!pulses[duty]) {
+      const n = 32;
+      const real = new Float32Array(n), imag = new Float32Array(n);
+      for (let k = 1; k < n; k++) real[k] = (2 / (k * Math.PI)) * Math.sin(k * Math.PI * duty);
+      pulses[duty] = ctx.createPeriodicWave(real, imag);
+    }
+    return pulses[duty];
+  }
+
+  // Petite musique 8 bits sans fin : basse triangle, arpèges et mélodie improvisée sur une gamme
+  // pentatonique (aucune fausse note possible), en suivant une grille d'accords tranquille.
+  function chiptune(h, dest, vol = 1) {
+    const { ctx: c } = h;
+    const out = h.gain(vol);
+    h.chain(out, h.filter('lowpass', 3200), dest);
+    const midi = m => 440 * Math.pow(2, (m - 69) / 12);
+    const GRIDS = [[0, 9, 5, 7], [0, 7, 9, 5], [9, 5, 0, 7], [5, 7, 0, 0]]; // C Am F G…
+    const SCALE = [0, 2, 4, 7, 9];
+    const step = 60 / 92 / 4; // doubles croches à 92 battements par minute
+    let next = c.currentTime + 0.1, i = 0, grid = GRIDS[0], lead = 72 + 4;
+    const note = (t, f, dur, peak, wave, decay = true) => {
+      const o = c.createOscillator();
+      if (typeof wave === 'string') o.type = wave; else o.setPeriodicWave(wave);
+      o.frequency.setValueAtTime(f, t);
+      const g = c.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(peak, t + 0.008);
+      if (decay) g.gain.exponentialRampToValueAtTime(peak * 0.35, t + dur * 0.6);
+      g.gain.linearRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(out);
+      o.start(t);
+      o.stop(t + dur + 0.02);
+    };
+    h.repeat(60, () => {
+      while (next < c.currentTime + 0.25) {
+        const bar = Math.floor(i / 16) % 4, s16 = i % 16;
+        if (i % 64 === 0) grid = GRIDS[Math.floor(h.rand(0, GRIDS.length))];
+        const root = 48 + grid[bar];
+        const chord = [0, grid[bar] === 9 ? 3 : 4, 7].map(x => root + 12 + x);
+        if (s16 % 4 === 0) note(next, midi(root - 12 + (s16 === 8 ? 7 : 0)), step * 3.5, 0.22, 'triangle', false);
+        note(next, midi(chord[s16 % 3] + 12), step * 0.9, 0.035, pulse(0.125));
+        // La mélodie bouge par petits pas et laisse des silences.
+        if (s16 % 2 === 0 && h.rand(0, 1) < (s16 % 4 === 0 ? 0.75 : 0.3)) {
+          const deg = SCALE.map(x => 60 + x).flatMap(x => [x, x + 12]);
+          const near = deg.filter(m => Math.abs(m - lead) <= 4 && m !== lead);
+          lead = near.length ? near[Math.floor(h.rand(0, near.length))] : 72;
+          note(next, midi(lead), step * (h.rand(0, 1) < 0.4 ? 4 : 2), 0.06, pulse(0.25));
+        }
+        next += step;
+        i++;
+      }
+    });
+  }
+
   const GEN = {
+    chiptune(h) { chiptune(h, h.out, 1); },
+
+    // Bornes qui bourdonnent, bips et pièces au loin, musique d'un jeu derrière un mur.
+    arcade(h) {
+      h.chain(h.noise('brown'), h.filter('lowpass', 380), h.gain(0.55), h.out);
+      h.chain(h.osc('sine', 60), h.gain(0.02), h.out);
+      h.chain(h.noise('pink'), h.filter('bandpass', 900, 0.6), h.gain(0.05), h.out);
+      const far = h.gain(1);
+      h.chain(far, h.filter('lowpass', 900), h.out);
+      chiptune(h, far, 0.35);
+      h.every(500, 2600, t => {
+        const p = h.pan(h.rand(-0.8, 0.8));
+        p.connect(h.out);
+        const f = h.rand(300, 1400);
+        h.tone(t, f, f * h.rand(0.5, 2), h.rand(0.05, 0.25), 0.012, { type: 'square', dest: p });
+      });
+      h.every(6000, 18000, t => {
+        const p = h.pan(h.rand(-0.6, 0.6));
+        p.connect(h.out);
+        h.tone(t, 988, 988, 0.08, 0.015, { type: 'square', dest: p });
+        h.tone(t + 0.08, 1319, 1319, 0.3, 0.015, { type: 'square', dest: p });
+      });
+    },
+
     white(h) { h.chain(h.noise('white'), h.filter('lowpass', 10000), h.gain(0.22), h.out); },
     pink(h) { h.chain(h.noise('pink'), h.gain(0.7), h.out); },
     brown(h) { h.chain(h.noise('brown'), h.gain(0.9), h.out); },

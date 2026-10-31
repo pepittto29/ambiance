@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld('ambiance', {
   deleteMode: (id) => ipcRenderer.invoke('mode-delete', id),
   runningApps: () => ipcRenderer.invoke('running-apps'),
   pickImage: () => ipcRenderer.invoke('pick-image'),
+  retroPreviews: () => ipcRenderer.invoke('retro-previews'),
+  openWindhawk: () => ipcRenderer.invoke('open-windhawk'),
   onModeChanged: (cb) => ipcRenderer.on('mode-changed', (_e, m) => cb(m)),
   tasks: {
     get: () => ipcRenderer.invoke('tasks-get'),

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, nativeTheme, systemPreferences, Tray, Menu, nativeImage, shell, globalShortcut, Notification } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, nativeTheme, systemPreferences, Tray, Menu, nativeImage, shell, globalShortcut, Notification, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -10,6 +10,7 @@ const tasks = require('./tasks');
 const clock = require('./clock');
 const music = require('./music');
 const spotify = require('./spotify');
+const retro = require('./retro');
 
 // Les erreurs du processus principal sont consignées dans %APPDATA%\Ambiance\main.log.
 function logError(err) {
@@ -119,7 +120,7 @@ function activateMode(id, { notify = false } = {}) {
   updateTray();
   setImmediate(() => {
     try { winSettings.setScreen(mode.screen); } catch (e) { logError(e); }
-    try { winSettings.applyWindows(mode.win); } catch (e) { logError(e); }
+    try { winSettings.applyWindows(resolveWin(mode.win)); } catch (e) { logError(e); }
     if (mode.minimize.length) { try { winSettings.minimizeApps(mode.minimize); } catch (e) { logError(e); } }
     for (const item of mode.launch) {
       if (EXTERNAL.test(item)) shell.openExternal(item);
@@ -128,8 +129,18 @@ function activateMode(id, { notify = false } = {}) {
     if (mode.music) playMusic(mode.music);
     saveConfig();
   });
+  // Le cadre vient juste après : créer sa fenêtre ne doit pas retarder le reste.
+  setTimeout(() => { try { retro.setFrame(mode.frame); } catch (e) { logError(e); } }, 120);
   if (notify && Notification.isSupported()) new Notification({ title: 'Ambiance', body: `Mode ${mode.name}`, silent: true }).show();
   return mode;
+}
+
+// Les valeurs « rétro » d'un mode deviennent des fichiers dessinés par l'application.
+function resolveWin(w) {
+  const out = { ...w, wallpaper: retro.resolveWallpaper(w.wallpaper) };
+  if (w.cursors === 'retro') { try { out.cursors = retro.cursorFiles(); } catch (e) { logError(e); out.cursors = null; } }
+  else out.cursors = null;
+  return out;
 }
 
 // Liens ouverts par le navigateur ou l'application concernée (Spotify, Deezer…).
@@ -208,6 +219,8 @@ ipcMain.handle('mode-delete', (_e, id) => {
   updateTray();
   return modesState();
 });
+ipcMain.handle('retro-previews', () => { try { return retro.previews(); } catch (e) { logError(e); return []; } });
+ipcMain.handle('open-windhawk', () => shell.openExternal('https://windhawk.net/'));
 ipcMain.handle('running-apps', () => { try { return winSettings.runningApps(); } catch { return []; } });
 ipcMain.handle('pick-image', async () => {
   const res = await dialog.showOpenDialog(win, {
@@ -412,15 +425,26 @@ if (!app.requestSingleInstanceLock()) {
     pet.setOptions({ reminders: config.petReminders });
     pet.setHandlers({ openTasks: () => { showWindow(); if (win) win.webContents.send('navigate', 'tasks'); } });
     setClock({});
+    for (const ev of ['display-metrics-changed', 'display-added', 'display-removed']) screen.on(ev, () => retro.fitFrame());
   });
-  app.on('before-quit', () => {
+  let cleaned = false;
+  app.on('before-quit', (e) => {
     quitting = true;
-    pet.stop();
-    music.stop();
-    // En quittant, tous les réglages de Windows modifiés par un mode sont restaurés.
-    try { winSettings.restoreAll(); } catch (e) { logError(e); }
-    config.activeMode = null;
-    saveConfig();
+    if (!cleaned) {
+      cleaned = true;
+      pet.stop();
+      music.stop();
+      // En quittant, tous les réglages de Windows modifiés par un mode sont restaurés.
+      try { winSettings.restoreAll(); } catch (err) { logError(err); }
+      retro.setFrame('');
+      config.activeMode = null;
+      saveConfig();
+    }
+    // Des appels à Windows lancés juste avant (changement de mode) peuvent être encore en cours.
+    if (winSettings.busy()) {
+      e.preventDefault();
+      winSettings.settle(3000).then(() => app.quit());
+    }
   });
   app.on('will-quit', () => globalShortcut.unregisterAll());
   // La souris et la zone de notification gardent l'application en vie.
