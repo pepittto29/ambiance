@@ -16,6 +16,7 @@
     <nav id="nav">
       <button class="nav-item active" data-page="modes"><span class="ico">&#xE945;</span><span class="lbl">Modes</span></button>
       <button class="nav-item" data-page="assistant"><span class="ico">&#xE8BD;</span><span class="lbl">Compagnon</span></button>
+      <button class="nav-item" data-page="games"><span class="ico">&#xE7FC;</span><span class="lbl">Jeux</span></button>
       <button class="nav-item" data-page="sounds"><span class="ico">&#xEC4F;</span><span class="lbl">Sons</span></button>
       <button class="nav-item" data-page="music"><span class="ico">&#xE8D6;</span><span class="lbl">Musique</span></button>
       <button class="nav-item" data-page="catalog"><span class="ico">&#xE753;</span><span class="lbl">Catalogue</span></button>
@@ -68,6 +69,36 @@
             <div class="as-progress-row"><span id="as-progress-text"></span><button id="as-cancel" class="btn">Annuler</button></div>
           </div>
           <p class="s-sub">Sans IA, votre compagnon comprend les commandes simples et répond avec des phrases toutes faites. Avec l'IA locale, il comprend les phrases libres et discute vraiment. Le modèle (Qwen2.5, licence Apache 2.0) et le moteur llama.cpp sont téléchargés une seule fois puis vérifiés ; ensuite, rien ne quitte votre PC.</p>
+        </div>
+      </section>
+
+      <section id="page-games" class="page">
+        <header class="page-head">
+          <div>
+            <h1>Jeux</h1>
+            <p class="sub">Pendant que vous travaillez, votre compagnon tricote des chapeaux et fait pousser son potager.</p>
+          </div>
+          <div class="gm-stars" title="Étoiles : récoltes et chapeaux en double"><span>★</span> <b id="gm-stars">0</b></div>
+        </header>
+        <div class="card">
+          <h3>Le tricot</h3>
+          <p class="sub small">Chaque touche que vous tapez ajoute une maille. Patron fini = un chapeau, d'une rareté tirée au sort. Ambiance compte seulement les frappes, jamais les touches.</p>
+          <div class="gm-knit"><div class="as-bar"><i id="gm-knit-bar"></i></div><span id="gm-knit-text"></span></div>
+        </div>
+        <div class="card">
+          <h3>Les chapeaux <small id="gm-hat-count" class="gm-count"></small></h3>
+          <div id="gm-hats" class="gm-hats"></div>
+          <p class="s-sub">Un chapeau en double est détricoté en étoiles. Ceux qui vous manquent s'achètent avec des étoiles.</p>
+        </div>
+        <div class="card">
+          <h3>La jardinière</h3>
+          <p class="sub small">Trois emplacements qui poussent quand vous êtes actif sur le PC, deux fois plus vite sous la pluie d'Ambiance. Votre compagnon vient les arroser. Cliquez sur un emplacement vide pour planter, sur une plante qui brille pour récolter.</p>
+          <div class="gm-garden-row">
+            <button id="gm-place" class="btn accent"><span class="ico">&#xE707;</span> <span id="gm-place-label">Poser la jardinière</span></button>
+            <button id="gm-remove" class="btn hidden">Ranger la jardinière</button>
+            <span id="gm-pots" class="sub small"></span>
+          </div>
+          <div id="gm-seeds" class="gm-seeds"></div>
         </div>
       </section>
 
@@ -527,5 +558,7 @@
   <script src="modes-ui.js"></script>
   <script src="music-ui.js"></script>
   <script src="assistant.js"></script>
+  <script src="pet/games-data.js"></script>
+  <script src="games-ui.js"></script>
 </body>
 </html>

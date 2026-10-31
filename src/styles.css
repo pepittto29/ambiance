@@ -780,3 +780,30 @@ details.credits summary { cursor: pointer; padding: 10px 0; }
   background: var(--card); color: var(--text); outline: none; user-select: text; font: inherit;
 }
 .as-form input:focus, .as-name input:focus { border-bottom: 2px solid var(--accent); }
+
+/* ---------- Jeux ---------- */
+.gm-stars { font-size: 20px; padding: 6px 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--stroke); white-space: nowrap; }
+.gm-stars span { color: #e0a800; }
+.gm-knit { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.gm-knit .as-bar { flex: 1; }
+.gm-knit span { font-variant-numeric: tabular-nums; color: var(--text-2); font-size: 13px; white-space: nowrap; }
+.gm-count { font-weight: 400; color: var(--text-2); font-size: 13px; margin-left: 6px; }
+.gm-hats { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 10px; }
+.gm-hat { border: 1px solid var(--stroke); border-top: 3px solid var(--r, var(--stroke)); border-radius: 8px; padding: 10px 8px 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; background: var(--subtle); cursor: pointer; text-align: center; font: inherit; color: inherit; }
+.gm-hat:hover { background: var(--card-hover); }
+.gm-hat.on { outline: 2px solid var(--accent); outline-offset: -2px; }
+.gm-hat.locked { cursor: default; }
+.gm-hat canvas { image-rendering: pixelated; width: 72px; height: 48px; }
+.gm-hat.locked canvas { filter: brightness(0) opacity(0.25); }
+.gm-hat .n { font-size: 12px; font-weight: 600; line-height: 1.2; }
+.gm-hat .r { font-size: 11px; color: var(--r); }
+.gm-hat .btn { padding: 2px 8px; font-size: 12px; min-height: 0; }
+.gm-garden-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+.gm-seeds { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.gm-seed { border: 1px solid var(--stroke); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; background: var(--subtle); text-align: center; }
+.gm-seed.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.gm-seed canvas { image-rendering: pixelated; width: 42px; height: 54px; }
+.gm-seed .n { font-weight: 600; }
+.gm-seed .d { font-size: 12px; color: var(--text-2); }
+.gm-seed .b { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
+.gm-seed .btn { padding: 2px 8px; font-size: 12px; min-height: 0; }

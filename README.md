@@ -78,6 +78,14 @@ et l'application apparaît dans « Applications installées » de Windows (dési
   - Émotions : joie, amour, curiosité, surprise, peur, colère, tristesse, ennui, faim, étourdissement, sommeil.
   - À manger tous les quarts d'heure (ou « Donner à manger » depuis l'icône près de l'horloge).
   - L'analyse de l'écran se fait localement, en mémoire ; rien n'est enregistré ni envoyé. Désactivable.
+- **Mini-jeux** (page Jeux), qui partagent une même réserve d'étoiles ★ :
+  - **Le tricot** : chaque touche tapée ajoute une maille. Quand le patron est fini, le compagnon a tricoté un
+    chapeau (20 à collectionner : communs, rares, épiques, légendaires) et le porte aussitôt. Un doublon est
+    détricoté en étoiles. Ambiance compte seulement les frappes, jamais les touches.
+  - **La jardinière** : un bac à trois emplacements, posé où vous voulez. Radis, carottes, tomates, citrouilles
+    et fleurs étoiles poussent pendant que vous êtes actif sur le PC, deux fois plus vite sous la pluie d'Ambiance.
+    Le compagnon vient arroser ; cliquez pour planter et récolter. Les étoiles achètent des graines et les
+    chapeaux qui manquent ; une fleur étoile peut cacher un chapeau.
 - **Zone de notification** : la croix coupe le son et range l'application près de l'horloge ; le compagnon continue.
   Clic droit sur l'icône : lecture/pause, afficher/masquer le compagnon, donner à manger, quitter.
 - **Fluent Design** : effet Mica sous Windows 11, thème clair/sombre et couleur d'accent du système.

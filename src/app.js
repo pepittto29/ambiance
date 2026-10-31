@@ -163,6 +163,7 @@
     }
     save();
     renderActive();
+    api.setPlaying(state.playing, Object.keys(state.active));
   }
 
   function setVolume(id, vol, source) {
@@ -176,7 +177,7 @@
   }
 
   function renderPlayState() {
-    api.setPlaying(state.playing);
+    api.setPlaying(state.playing, Object.keys(state.active));
     const glyph = state.playing ? '' : '';
     $('#btn-play').textContent = glyph;
     $('#c-play').textContent = glyph;

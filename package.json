@@ -1,7 +1,7 @@
 {
   "name": "ambiance",
   "productName": "Ambiance",
-  "version": "1.5.2",
+  "version": "1.6.0",
   "description": "Bruits blancs et ambiances sonores pour se concentrer, se détendre et dormir.",
   "main": "main.js",
   "author": "Pierre",
@@ -38,6 +38,7 @@
       "spotify.js",
       "retro.js",
       "ai.js",
+      "games.js",
       "win-settings.js",
       "src/**/*",
       "assets/**/*",

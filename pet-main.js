@@ -8,6 +8,7 @@ const path = require('path');
 const world = require('./pet-world');
 const memory = require('./pet-memory');
 const tasks = require('./tasks');
+const games = require('./games');
 
 let hook = null;
 try { hook = require('uiohook-napi').uIOhook; } catch { /* clics globaux indisponibles */ }
@@ -62,6 +63,8 @@ let holes = [];
 let nextHole = 0;
 let holeSeq = 0;
 let burrow = null;
+let garden = null; // jardinière : { x, y, win }
+let lastMinute = now();
 
 // ---------- Utilitaires ----------
 function area(x = pet.x, y = pet.y) { return world.displayAt(x, y).workArea; }
@@ -120,7 +123,7 @@ function pathClear(p, x0, x1) {
 }
 
 function ownWindows() {
-  return [petWin, food?.win, burrow?.win, ...holes.map(h => h.win)].filter(w => w && !w.isDestroyed());
+  return [petWin, food?.win, burrow?.win, garden?.win, ...holes.map(h => h.win)].filter(w => w && !w.isDestroyed());
 }
 
 function ownHandles() {
@@ -160,6 +163,7 @@ function quietSpot(p, around, span) {
 function goalTarget(g) {
   if (g.type === 'food') return food && food.landed ? { x: food.x, y: food.y } : null;
   if (g.type === 'hole') return g.hole === burrow || holes.includes(g.hole) ? (g.hole.open > 0.8 ? { x: g.hole.x, y: g.hole.y } : null) : null;
+  if (g.type === 'garden') return garden && garden.placed ? { x: garden.x, y: garden.y } : null;
   if (g.type === 'cursor') {
     const s = world.surfaceBelow(cursor.x, cursor.y - 4);
     return s ? { x: cursor.x, y: s.y } : null;
@@ -184,6 +188,12 @@ function pickGoal() {
   if (burrow && burrow.open > 0.8 && ((sleepy && Math.random() < 0.3) || (busy && Math.random() < 0.12))) {
     setGoal('hole', 60000, { hole: burrow, reach: 10, nap: true });
     emote('home', 1600, sleepy ? 'closed' : null);
+    return;
+  }
+  // Il va arroser la jardinière, ou montrer qu'une récolte est prête.
+  if (garden && garden.placed && !busy && (games.needsWater() || (games.ripeCount() > 0 && Math.random() < 0.12))) {
+    setGoal('garden', 60000, { reach: 22 });
+    emote(games.needsWater() ? 'drop' : '★', 1400);
     return;
   }
   const open = holes.filter(h => h.open > 0.8 && !h.exit);
@@ -265,6 +275,15 @@ function reachGoal() {
     emote('♥', 1200, 'happy');
   } else if (g.type === 'hole') {
     enterHole(g.hole, g.nap);
+  } else if (g.type === 'garden') {
+    if (games.needsWater()) {
+      games.water();
+      setAct('sniff', 2600);
+      emote('drop', 2600, 'happy');
+    } else {
+      setAct('dance', 1800);
+      emote('★', 2000, 'happy');
+    }
   } else {
     setAct('idle', rand(600, 1600));
     if (Math.random() < 0.4) emote(pick(['♪', '✦', '?']), 1000);
@@ -714,6 +733,72 @@ function updateBurrow(dt) {
   placeHoleWindow(burrow);
 }
 
+// ---------- Jardinière ----------
+const GARDEN_W = 96, GARDEN_H = 56;
+
+function gardenWindow() {
+  const win = new BrowserWindow({
+    width: GARDEN_W, height: GARDEN_H, transparent: true, frame: false, resizable: false, movable: false,
+    skipTaskbar: true, focusable: false, hasShadow: false, show: false, alwaysOnTop: true,
+    webPreferences: { preload: path.join(__dirname, 'pet-preload.js'), backgroundThrottling: false },
+  });
+  win.setAlwaysOnTop(true, 'screen-saver');
+  win.setIgnoreMouseEvents(true, { forward: true });
+  win.loadFile(path.join(__dirname, 'src', 'pet', 'garden.html'));
+  win.once('ready-to-show', () => {
+    sendGarden();
+    win.showInactive();
+    if (petWin && !petWin.isDestroyed()) petWin.moveTop();
+  });
+  return win;
+}
+
+function sendGarden() {
+  if (garden && garden.win && !garden.win.isDestroyed()) garden.win.webContents.send('pet-state', games.state());
+}
+
+function updateGarden() {
+  const g = games.garden();
+  if (!g) {
+    if (garden) { closeWin(garden.win); garden = null; }
+    return;
+  }
+  let s = world.surfaceBelow(g.x, g.y - 8);
+  if (!s || s.y - g.y > 60) s = world.platforms().find(p => p.kind === 'floor' && g.x >= p.x1 && g.x <= p.x2) || s;
+  if (!s) return;
+  if (!garden) garden = { win: gardenWindow() };
+  Object.assign(garden, { x: g.x, y: s.y, placed: true });
+  const b = { x: Math.round(g.x - GARDEN_W / 2), y: Math.round(s.y - GARDEN_H + 2), width: GARDEN_W, height: GARDEN_H };
+  const cur = garden.win.getBounds();
+  if (cur.x !== b.x || cur.y !== b.y) garden.win.setBounds(b);
+}
+
+games.events.on('change', sendGarden);
+
+// Un chapeau vient d'être tricoté (ou trouvé dans une fleur étoile) : le compagnon l'annonce.
+games.events.on('hat', ({ hat, dup, refund }) => {
+  if (!petWin || pet.hidden) return;
+  pet.sound++;
+  if (pet.mode === 'floor' && !pet.held) setAct('dance', 2400);
+  emote('★', 2400, 'happy');
+  module.exports.say(dup
+    ? `Encore un ${hat.name.toLowerCase()}… Je le détricote : +${refund} ★`
+    : `Tadam ! J'ai tricoté : ${hat.name} (${{ commun: 'commun', rare: 'rare', epique: 'épique', legendaire: 'légendaire' }[hat.rarity]}) !`);
+});
+
+ipcMain.on('garden-ignore', (e, ignore) => {
+  const w = BrowserWindow.fromWebContents(e.sender);
+  if (w && garden && w === garden.win) w.setIgnoreMouseEvents(!!ignore, { forward: true });
+});
+ipcMain.handle('garden-click', (_e, i) => {
+  const r = games.pot(Number(i));
+  if (petWin && !pet.hidden) {
+    if (r.harvested) { pet.sound++; emote('★', 1600, 'happy'); }
+    else if (r.planted) emote('♪', 1000);
+  }
+  return r;
+});
+
 function enterHole(h, nap = false) {
   pet.mode = 'floor';
   pet.x = h.x;
@@ -864,7 +949,13 @@ function tick() {
   }
   updateFood(dt);
   updateHoles(dt);
+  updateGarden();
   updateInfo();
+  // Chaque minute où l'utilisateur est actif fait pousser la jardinière.
+  if (t - lastMinute >= 60000) {
+    lastMinute = t;
+    if (t - pet.lastActive < 60000) games.minute();
+  }
 
   if (pet.hidden) {
     if (t > pet.until) exitHole();
@@ -918,6 +1009,7 @@ function render(t) {
     flipBubble: pet.mode === 'ceil',
     sink: Math.round(sink * 20) / 20,
     sound: soundOn ? pet.sound : 0,
+    hat: games.wearing(),
   };
   const msg = JSON.stringify(state);
   if (msg !== lastSent) {
@@ -960,7 +1052,7 @@ function onGlobalClick(e) {
   }
 }
 
-function onKey() { memory.keyPressed(); pet.lastActive = now(); }
+function onKey() { memory.keyPressed(); games.stitch(); pet.lastActive = now(); }
 
 let clickTimer = null;
 
@@ -1036,7 +1128,7 @@ ipcMain.on('pet-up', () => {
 // ---------- Choix de l'emplacement du terrier ----------
 let picking = null;
 
-function pickBurrow() {
+function pickBurrow(what = 'le terrier') {
   if (picking) return picking.promise;
   let resolve;
   const promise = new Promise(r => { resolve = r; });
@@ -1047,7 +1139,7 @@ function pickBurrow() {
       webPreferences: { preload: path.join(__dirname, 'pet-preload.js') },
     });
     w.setAlwaysOnTop(true, 'screen-saver');
-    w.loadFile(path.join(__dirname, 'src', 'pet', 'picker.html'));
+    w.loadFile(path.join(__dirname, 'src', 'pet', 'picker.html'), { query: { what } });
     w.once('ready-to-show', () => { w.show(); w.focus(); });
     return w;
   });
@@ -1117,6 +1209,9 @@ function stop() {
   holes = [];
   if (burrow) closeWin(burrow.win);
   burrow = null;
+  if (garden) closeWin(garden.win);
+  garden = null;
+  games.flush();
   closeInfo();
   closeWin(petWin);
   petWin = null;

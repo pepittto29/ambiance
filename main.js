@@ -12,6 +12,7 @@ const music = require('./music');
 const spotify = require('./spotify');
 const retro = require('./retro');
 const ai = require('./ai');
+const games = require('./games');
 
 // Les erreurs du processus principal sont consignées dans %APPDATA%\Ambiance\main.log.
 function logError(err) {
@@ -228,6 +229,20 @@ ipcMain.handle('ai-cancel', () => ai.cancel());
 ipcMain.handle('ai-remove', (_e, id) => ai.remove(id));
 ipcMain.handle('ai-use', (_e, id) => ai.use(id));
 ipcMain.handle('ai-chat', safe((_e, messages, opts) => ai.chat(messages, opts)));
+// ---------- Mini-jeux (tricot de chapeaux, jardinière) ----------
+games.events.on('change', s => { if (win && !win.isDestroyed()) win.webContents.send('games-state', s); });
+ipcMain.handle('games-state', () => games.state());
+ipcMain.handle('games-wear', (_e, id) => games.wear(id));
+ipcMain.handle('games-seed', (_e, id) => games.chooseSeed(id));
+ipcMain.handle('games-buy-seed', (_e, id) => games.buySeed(id));
+ipcMain.handle('games-buy-hat', (_e, id) => games.buyHat(id));
+ipcMain.handle('games-place-garden', async () => {
+  if (!config.pet) setPet(true);
+  const point = await pet.pickBurrow('la jardinière');
+  if (point) games.setGarden(point);
+  return games.state();
+});
+ipcMain.handle('games-remove-garden', () => { games.setGarden(null); return games.state(); });
 ipcMain.handle('pet-say', (_e, text) => { if (config.pet) pet.say(text); });
 ipcMain.handle('retro-previews', () => { try { return retro.previews(); } catch (e) { logError(e); return []; } });
 ipcMain.handle('open-windhawk', () => shell.openExternal('https://windhawk.net/'));
@@ -345,8 +360,9 @@ ipcMain.handle('pick-burrow', async () => {
   return config;
 });
 
-ipcMain.on('playing', (_e, on) => {
+ipcMain.on('playing', (_e, on, ids) => {
   playing = !!on;
+  games.setSounds(playing ? ids : []);
   updateTray();
 });
 
@@ -447,6 +463,7 @@ if (!app.requestSingleInstanceLock()) {
       pet.stop();
       music.stop();
       ai.stop();
+      games.flush();
       // En quittant, tous les réglages de Windows modifiés par un mode sont restaurés.
       try { winSettings.restoreAll(); } catch (err) { logError(err); }
       retro.setFrame('');

@@ -155,6 +155,20 @@ function pose(t) {
   }
 }
 
+// Chapeau tricoté : centré sur la colonne de l'œil, sa dernière rangée posée sur le haut de la tête
+// (sur les oreilles pour le lapin et le chat).
+function drawHat(id, top, left, flip) {
+  const hat = GAMES.HATS.find(h => h.id === id);
+  if (!hat) return;
+  const c = animal.eye[0];
+  let headTop = 0;
+  while (headTop < 16 && animal.rows[headTop][c] === '.') headTop++;
+  const w = hat.rows[0].length, h = hat.rows.length;
+  const col = c - Math.floor(w / 2);
+  const x = flip ? 24 - (col + w) : col;
+  drawGrid(hat.rows, left + x * SCALE, top + (headTop - h + 1) * SCALE, SCALE, flip, GAMES.PAL);
+}
+
 function drawBubble(sym, t) {
   const g = GLYPHS[sym];
   if (!g) return;
@@ -189,6 +203,7 @@ function render(t) {
   }
   const top = FEET_Y - 16 * SCALE + (p.dy || 0) + st.sink * 54;
   drawGrid(rows, LEFT + (p.dx || 0), top, SCALE, flip, animal.pal);
+  if (st.hat) drawHat(st.hat, top + (p.faceDy || 0) * SCALE, LEFT + (p.dx || 0), flip);
   ctx.restore();
   if (st.emo) drawBubble(st.emo, t);
   requestAnimationFrame(render);
