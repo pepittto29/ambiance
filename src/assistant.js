@@ -426,6 +426,7 @@
   }
 
   let busy = false;
+  let askedName = false;
   async function send(raw) {
     raw = String(raw || '').trim();
     if (!raw || busy) return;
@@ -436,8 +437,16 @@
     let say = '', did = '', offer = null;
     const thinking = addMsg('pet thinking', '…');
     try {
-      const learned = learn(raw);
-      const cmd = parse(raw);
+      // L'état de l'IA est relu à chaque message (installée, supprimée ou changée entre-temps).
+      aiState = await api.ai.state();
+      let learned = learn(raw);
+      // Réponse à « dis-moi ton prénom » : un ou deux mots seuls sont pris pour le prénom.
+      if (!learned && askedName && /^[A-Za-zÀ-ÿ-]{2,20}( [A-Za-zÀ-ÿ-]{2,20})?$/.test(raw.trim())) {
+        mem.userName = raw.trim().split(' ').map(w => w[0].toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        learned = 'name';
+      }
+      askedName = false;
+      const cmd = learned === 'name' ? null : parse(raw);
       if (cmd) {
         const r = await run(cmd);
         say = r.say; did = r.did || '';
@@ -455,6 +464,7 @@
       say = smallTalk(raw, null) || `Oups, j'ai eu un petit bug : ${e.message}`;
     }
     thinking.remove();
+    askedName = /ton pr[ée]nom|comment tu t'appelles/i.test(say);
     addMsg('pet', say, did, offer);
     mem.history.push({ who: 'pet', text: say });
     saveMem();
