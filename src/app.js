@@ -593,6 +593,7 @@
     play,
     pause,
     playMix,
+    toggleSound,
     startSaver,
     isPlaying: () => state.playing,
     hasSounds: () => Object.keys(state.active).length > 0,

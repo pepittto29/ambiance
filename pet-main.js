@@ -750,6 +750,7 @@ function exitHole() {
 const INFO_W = 280, INFO_H = 190;
 let infoWin = null;
 let infoUntil = 0;
+let infoSay = null; // ce que dit le compagnon (IA ou réponses toutes faites)
 let infoHover = false;
 let nextReminder = now() + REMIND_EVERY;
 
@@ -766,7 +767,7 @@ function placeInfo() {
 
 function sendInfo(reason) {
   if (!infoWin || infoWin.isDestroyed()) return;
-  infoWin.webContents.send('pet-state', { summary: tasks.summary(), reason, name: ANIMAL_NAME[opts.animal] || 'ton compagnon', below: placeInfo() });
+  infoWin.webContents.send('pet-state', { summary: tasks.summary(), reason, name: ANIMAL_NAME[opts.animal] || 'ton compagnon', petName: opts.name, say: reason === 'parole' ? infoSay : null, below: placeInfo() });
 }
 
 function showInfo(reason = 'info', ms = 8000) {
@@ -1126,6 +1127,11 @@ module.exports = {
   stop,
   pickBurrow,
   showInfo: () => showInfo('info'),
+  // Le compagnon parle dans sa bulle ; elle reste plus longtemps pour les longues phrases.
+  say(text) {
+    infoSay = String(text || '').slice(0, 220);
+    if (infoSay) { showInfo('parole', Math.min(14000, 4000 + infoSay.length * 60)); emote('♪', 1500, 'happy'); }
+  },
   setHandlers(h) { handlers = { ...handlers, ...h }; },
   get running() { return !!petWin; },
   setSound(on) { soundOn = !!on; },

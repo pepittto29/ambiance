@@ -15,6 +15,7 @@
   <div id="app">
     <nav id="nav">
       <button class="nav-item active" data-page="modes"><span class="ico">&#xE945;</span><span class="lbl">Modes</span></button>
+      <button class="nav-item" data-page="assistant"><span class="ico">&#xE8BD;</span><span class="lbl">Compagnon</span></button>
       <button class="nav-item" data-page="sounds"><span class="ico">&#xEC4F;</span><span class="lbl">Sons</span></button>
       <button class="nav-item" data-page="music"><span class="ico">&#xE8D6;</span><span class="lbl">Musique</span></button>
       <button class="nav-item" data-page="catalog"><span class="ico">&#xE753;</span><span class="lbl">Catalogue</span></button>
@@ -34,9 +35,40 @@
             <h1>Modes</h1>
             <p class="sub">Un clic change l'ambiance, le compagnon et les réglages de Windows. Tout est remis en place en quittant le mode. Raccourci : Ctrl + Alt + M.</p>
           </div>
-          <button id="btn-new-mode" class="btn"><span class="ico">&#xE710;</span> Créer un mode</button>
+          <div class="head-actions">
+            <button id="btn-describe-mode" class="btn" title="Décrivez le mode en une phrase, le compagnon le prépare">✨ Décrire un mode</button>
+            <button id="btn-new-mode" class="btn"><span class="ico">&#xE710;</span> Créer un mode</button>
+          </div>
         </header>
         <div id="mode-grid" class="mode-grid"></div>
+      </section>
+
+      <section id="page-assistant" class="page">
+        <header class="page-head">
+          <div>
+            <h1>Parler à <span id="as-name-title">Pixel</span></h1>
+            <p class="sub">Demandez-lui un son, un mode, une tâche… ou discutez simplement. Tout se passe sur votre PC.</p>
+          </div>
+          <label class="as-name">Son nom <input id="as-name" type="text" maxlength="20" spellcheck="false"></label>
+        </header>
+        <div class="card as-chat">
+          <div id="as-log" class="as-log" aria-live="polite"></div>
+          <div id="as-chips" class="as-chips"></div>
+          <form id="as-form" class="as-form">
+            <input id="as-input" type="text" maxlength="300" autocomplete="off" placeholder="Écrivez à votre compagnon… ex. « mets de la pluie », « crée un mode pour lire le soir »">
+            <button class="btn accent" id="as-send" title="Envoyer"><span class="ico">&#xE724;</span></button>
+          </form>
+        </div>
+        <div class="card as-brain">
+          <h3>Son cerveau</h3>
+          <p id="as-status" class="sub"></p>
+          <div id="as-models" class="as-models"></div>
+          <div id="as-progress" class="as-progress hidden">
+            <div class="as-bar"><i id="as-bar"></i></div>
+            <div class="as-progress-row"><span id="as-progress-text"></span><button id="as-cancel" class="btn">Annuler</button></div>
+          </div>
+          <p class="s-sub">Sans IA, votre compagnon comprend les commandes simples et répond avec des phrases toutes faites. Avec l'IA locale, il comprend les phrases libres et discute vraiment. Le modèle (Qwen2.5, licence Apache 2.0) et le moteur llama.cpp sont téléchargés une seule fois puis vérifiés ; ensuite, rien ne quitte votre PC.</p>
+        </div>
       </section>
 
       <section id="page-music" class="page">
@@ -494,5 +526,6 @@
   <script src="premium.js"></script>
   <script src="modes-ui.js"></script>
   <script src="music-ui.js"></script>
+  <script src="assistant.js"></script>
 </body>
 </html>

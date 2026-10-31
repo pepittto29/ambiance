@@ -134,8 +134,9 @@
     $('#me-sound').querySelector('[value=saved]').disabled = !(mix && Object.keys(mix).length);
   }
 
-  async function openEditor(mode) {
-    const isNew = !mode;
+  // draft : mode tout prêt (préparé par le compagnon) mais pas encore enregistré.
+  async function openEditor(mode, draft = false) {
+    const isNew = !mode || draft;
     editing = JSON.parse(JSON.stringify(mode || {
       id: null, name: 'Mon mode', emoji: '✨', colors: ['#00897b', '#00302b'], desc: '',
       sound: { mix: null }, focusTimer: false, pet: { energy: 'normal' },
@@ -289,6 +290,13 @@
   });
   $('#btn-new-mode').addEventListener('click', () => openEditor(null));
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && editing) closeEditor(); });
+
+  window.Modes = {
+    openDraft(m) {
+      document.querySelector('.nav-item[data-page="modes"]')?.click();
+      openEditor(m, true);
+    },
+  };
 
   api.getModes().then(s => { state = s; render(); preloadSounds(); });
   loadRetroWalls();

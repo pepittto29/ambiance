@@ -14,6 +14,16 @@ contextBridge.exposeInMainWorld('ambiance', {
   runningApps: () => ipcRenderer.invoke('running-apps'),
   pickImage: () => ipcRenderer.invoke('pick-image'),
   retroPreviews: () => ipcRenderer.invoke('retro-previews'),
+  petSay: (text) => ipcRenderer.invoke('pet-say', text),
+  ai: {
+    state: () => ipcRenderer.invoke('ai-state'),
+    install: (id) => ipcRenderer.invoke('ai-install', id),
+    cancel: () => ipcRenderer.invoke('ai-cancel'),
+    remove: (id) => ipcRenderer.invoke('ai-remove', id),
+    use: (id) => ipcRenderer.invoke('ai-use', id),
+    chat: (messages, opts) => ipcRenderer.invoke('ai-chat', messages, opts),
+    onState: (cb) => ipcRenderer.on('ai-state', (_e, s) => cb(s)),
+  },
   openWindhawk: () => ipcRenderer.invoke('open-windhawk'),
   onModeChanged: (cb) => ipcRenderer.on('mode-changed', (_e, m) => cb(m)),
   tasks: {

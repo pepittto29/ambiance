@@ -29,6 +29,9 @@
     button.ok { background: #3f9b5a; }
     button:active { transform: translate(1px, 1px); box-shadow: none; }
     .hidden { display: none !important; }
+    /* Quand le compagnon parle, seule sa phrase s'affiche. */
+    .talk #barbox, .talk #next, .talk .actions { display: none; }
+    .talk .msg { margin-bottom: 0; color: #2a2238; }
   </style>
 </head>
 <body>

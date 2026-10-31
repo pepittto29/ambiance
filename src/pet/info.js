@@ -4,6 +4,12 @@ const $ = id => document.getElementById(id);
 window.pet.onState(s => {
   const { summary: sm, reason, name, below } = s;
   document.body.classList.toggle('below', !!below);
+  document.body.classList.toggle('talk', reason === 'parole');
+  if (reason === 'parole') {
+    $('title').textContent = s.petName || 'Ton compagnon';
+    $('msg').textContent = s.say || '';
+    return;
+  }
   const titles = { rappel: 'Petit rappel !', bravo: 'Bravo !', info: 'Tes tâches' };
   $('title').textContent = titles[reason] || 'Tes tâches';
   let msg;

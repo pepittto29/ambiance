@@ -21,6 +21,16 @@ et l'application apparaît dans « Applications installées » de Windows (dési
   mode d'alimentation, fond d'écran, mise en veille empêchée, applications distrayantes réduites, sites ou
   programmes à ouvrir. **Tout est restauré** en quittant le mode ou l'application, même après un plantage.
   Changement rapide : icône près de l'horloge ou **Ctrl + Alt + M**.
+- **Parler à son compagnon** (page Compagnon) : demandez-lui un son (« mets de la pluie et du vent »), un mode
+  (« mode focus »), une tâche (« ajoute la tâche appeler Léa demain »), une session Focus, ce qu'il vous reste à
+  faire, ou de **créer un mode à partir d'une phrase** (« crée un mode pour réviser le soir avec de la pluie »).
+  Il retient votre prénom et vos goûts, et vous pouvez lui donner un nom. Sans rien installer, il comprend les
+  commandes et répond avec des phrases toutes faites.
+- **IA locale facultative** : en un clic, Ambiance télécharge un petit modèle de langage (Qwen2.5, licence
+  Apache 2.0 : « Léger » 491 Mo ou « Malin » 1,1 Go, conseillé selon la mémoire du PC) et le moteur llama.cpp
+  (20 Mo). Le compagnon comprend alors les phrases libres et discute avec sa personnalité. Tout tourne sur le
+  processeur, sans carte graphique, et **rien ne quitte le PC** ; les fichiers sont vérifiés par empreinte et le
+  moteur s'arrête tout seul quand on ne lui parle plus.
 - **Mode Rétro** : fonds d'écran en pixel art dessinés par l'application (coucher de soleil, nuit étoilée,
   grand jour, arcade), curseurs en pixels, couleur d'accent de Windows au choix, musique **chiptune** ou
   **salle d'arcade** générée en direct, et cadre décoratif sur l'écran (bordure en pixels ou vieil écran

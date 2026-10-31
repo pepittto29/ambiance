@@ -11,6 +11,7 @@ const clock = require('./clock');
 const music = require('./music');
 const spotify = require('./spotify');
 const retro = require('./retro');
+const ai = require('./ai');
 
 // Les erreurs du processus principal sont consignées dans %APPDATA%\Ambiance\main.log.
 function logError(err) {
@@ -39,9 +40,9 @@ const builtinDir = path.join(__dirname, 'src', 'sounds');
 
 // Préférences lues par le processus principal (nécessaires avant l'ouverture de la fenêtre).
 const configPath = () => path.join(app.getPath('userData'), 'config.json');
-let config = { pet: true, petSound: true, closeToTray: true, petScreen: true, petCheese: true, petHoles: true, petAnimal: 'souris', burrow: null, modes: [], activeMode: null,
+let config = { pet: true, petSound: true, closeToTray: true, petScreen: true, petCheese: true, petHoles: true, petAnimal: 'souris', petName: 'Pixel', burrow: null, modes: [], activeMode: null,
   clock: { show: false, seconds: false, date: true, x: null, y: null }, petReminders: true };
-const petOptions = () => ({ screenLines: config.petScreen, cheese: config.petCheese, holes: config.petHoles, animal: config.petAnimal, burrow: config.burrow });
+const petOptions = () => ({ screenLines: config.petScreen, cheese: config.petCheese, holes: config.petHoles, animal: config.petAnimal, burrow: config.burrow, name: config.petName });
 function loadConfig() {
   try { Object.assign(config, JSON.parse(fs.readFileSync(configPath(), 'utf8'))); } catch { /* première exécution */ }
 }
@@ -219,6 +220,15 @@ ipcMain.handle('mode-delete', (_e, id) => {
   updateTray();
   return modesState();
 });
+// ---------- IA locale ----------
+ai.events.on('state', s => { if (win && !win.isDestroyed()) win.webContents.send('ai-state', s); });
+ipcMain.handle('ai-state', () => ai.state());
+ipcMain.handle('ai-install', safe((_e, id) => ai.install(id)));
+ipcMain.handle('ai-cancel', () => ai.cancel());
+ipcMain.handle('ai-remove', (_e, id) => ai.remove(id));
+ipcMain.handle('ai-use', (_e, id) => ai.use(id));
+ipcMain.handle('ai-chat', safe((_e, messages, opts) => ai.chat(messages, opts)));
+ipcMain.handle('pet-say', (_e, text) => { if (config.pet) pet.say(text); });
 ipcMain.handle('retro-previews', () => { try { return retro.previews(); } catch (e) { logError(e); return []; } });
 ipcMain.handle('open-windhawk', () => shell.openExternal('https://windhawk.net/'));
 ipcMain.handle('running-apps', () => { try { return winSettings.runningApps(); } catch { return []; } });
@@ -313,6 +323,7 @@ ipcMain.handle('set-config', (_e, patch) => {
   if ('petSound' in patch) { config.petSound = !!patch.petSound; pet.setSound(config.petSound); }
   for (const k of ['petScreen', 'petCheese', 'petHoles']) if (k in patch) config[k] = !!patch[k];
   if (typeof patch.petAnimal === 'string') config.petAnimal = patch.petAnimal;
+  if (typeof patch.petName === 'string') config.petName = patch.petName.trim().slice(0, 20) || 'Pixel';
   if ('burrow' in patch && patch.burrow === null) config.burrow = null;
   pet.setOptions(petOptions());
   if ('closeToTray' in patch) config.closeToTray = !!patch.closeToTray;
@@ -412,6 +423,7 @@ if (!app.requestSingleInstanceLock()) {
     app.setAppUserModelId('com.pierre.ambiance');
     loadConfig();
     spotify.init();
+    ai.init();
     // Remet Windows d'origine si l'application avait été fermée brutalement pendant un mode.
     try { winSettings.init(); } catch (e) { logError(e); }
     config.activeMode = null;
@@ -434,6 +446,7 @@ if (!app.requestSingleInstanceLock()) {
       cleaned = true;
       pet.stop();
       music.stop();
+      ai.stop();
       // En quittant, tous les réglages de Windows modifiés par un mode sont restaurés.
       try { winSettings.restoreAll(); } catch (err) { logError(err); }
       retro.setFrame('');
