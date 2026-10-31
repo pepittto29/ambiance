@@ -112,19 +112,22 @@ function activateMode(id, { notify = false } = {}) {
   const all = modes.list(config.modes);
   const mode = all.find(m => m.id === id) || all[0];
   const isNormal = mode.id === 'normal';
-  try { winSettings.applyWindows(mode.win); } catch (e) { logError(e); }
-  try { winSettings.setScreen(mode.screen); } catch (e) { logError(e); }
-  pet.setOptions({ energy: mode.pet.energy });
-  if (mode.minimize.length) { try { winSettings.minimizeApps(mode.minimize); } catch (e) { logError(e); } }
-  for (const item of mode.launch) {
-    if (EXTERNAL.test(item)) shell.openExternal(item);
-    else if (item) shell.openPath(item);
-  }
-  if (mode.music) playMusic(mode.music);
+  // D'abord ce qui se voit et s'entend (page, son, compagnon), puis les réglages de Windows.
   config.activeMode = isNormal ? null : mode.id;
-  saveConfig();
-  updateTray();
+  pet.setOptions({ energy: mode.pet.energy });
   if (win) win.webContents.send('mode-changed', mode);
+  updateTray();
+  setImmediate(() => {
+    try { winSettings.setScreen(mode.screen); } catch (e) { logError(e); }
+    try { winSettings.applyWindows(mode.win); } catch (e) { logError(e); }
+    if (mode.minimize.length) { try { winSettings.minimizeApps(mode.minimize); } catch (e) { logError(e); } }
+    for (const item of mode.launch) {
+      if (EXTERNAL.test(item)) shell.openExternal(item);
+      else if (item) shell.openPath(item);
+    }
+    if (mode.music) playMusic(mode.music);
+    saveConfig();
+  });
   if (notify && Notification.isSupported()) new Notification({ title: 'Ambiance', body: `Mode ${mode.name}`, silent: true }).show();
   return mode;
 }

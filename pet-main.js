@@ -426,6 +426,14 @@ function updateFloor(dt) {
     else lostFooting();
     return;
   }
+  // Pendant que sa bulle est ouverte (ou pendant un double-clic), il reste sur place, tourné vers vous.
+  if (bubbleOpen() && !['eat', 'sleep', 'hole-in'].includes(pet.act)) {
+    pet.speed = 0;
+    pet.vx = 0;
+    if (pet.act !== 'look') setAct('look', 1000);
+    pet.until = now() + 1000;
+    return;
+  }
   if (pet.act === 'walk' || pet.act === 'run') {
     const dx = pet.tx - pet.x;
     // Accélère au départ, ralentit à l'arrivée.
@@ -781,6 +789,10 @@ function showInfo(reason = 'info', ms = 8000) {
   }
 }
 
+// Il reste immobile quand sa bulle est ouverte, et entre les deux clics d'un double-clic
+// (sinon il s'éloigne et le second clic tombe à côté).
+const bubbleOpen = () => !!(infoWin && !infoWin.isDestroyed()) || !!clickTimer;
+
 function closeInfo() {
   if (infoWin && !infoWin.isDestroyed()) infoWin.destroy();
   infoWin = null;
@@ -863,6 +875,7 @@ function tick() {
     updateHeld();
   } else if (pet.mode === 'air') updateAir(dt);
   else if (pet.mode === 'floor') updateFloor(dt);
+  else if (bubbleOpen()) { /* accroché au mur ou au plafond : il attend que la bulle se ferme */ }
   else if (pet.mode === 'ceil') updateCeiling(dt);
   else updateWall(dt);
 
@@ -1126,10 +1139,11 @@ module.exports = {
   },
   giveFood() { if (petWin) { if (food) { closeWin(food.win); food = null; } spawnFood(); } },
   // Pour les tests : état interne et surfaces connues.
-  debug: () => ({ pet: { x: pet.x, y: pet.y, mode: pet.mode, act: pet.act, support: pet.support, goal: pet.goal && pet.goal.type }, windows: world.windowCount, lines: world.lineCount, food: food && food.kind, holes: holes.length, burrow: !!burrow }),
+  debug: () => ({ info: { open: bubbleOpen(), hover: infoHover, left: Math.round(infoUntil - now()) }, pet: { x: pet.x, y: pet.y, mode: pet.mode, act: pet.act, support: pet.support, goal: pet.goal && pet.goal.type }, windows: world.windowCount, lines: world.lineCount, food: food && food.kind, holes: holes.length, burrow: !!burrow }),
   _test: {
     spawnHole, spawnFood,
     enterHole: () => (burrow || holes[0]) && enterHole(burrow || holes[0]),
+    walk: (x) => walkTo(x),
     place: (x, y) => { pet.x = x; pet.y = y; pet.held = false; pet.hidden = false; startFall(0, 0); },
     platforms: () => world.platforms(),
   },

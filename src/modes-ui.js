@@ -79,6 +79,16 @@
   }
 
   // Le processus principal annonce le mode activé (page, icône près de l'horloge ou Ctrl+Alt+M).
+  // Précharge les sons des modes : le changement de mode est alors immédiat.
+  let preloaded = false;
+  function preloadSounds() {
+    if (preloaded || typeof Engine === 'undefined') return;
+    preloaded = true;
+    const ids = new Set(state.modes.flatMap(m => Object.keys((m.sound && m.sound.mix) || {})));
+    const run = () => ids.forEach(id => Engine.preload(id));
+    if (window.requestIdleCallback) requestIdleCallback(run, { timeout: 5000 }); else setTimeout(run, 2000);
+  }
+
   api.onModeChanged(m => {
     api.getModes().then(s => { state = s; render(); });
     if (m.sound.mix) {
@@ -236,5 +246,5 @@
   $('#btn-new-mode').addEventListener('click', () => openEditor(null));
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && editing) closeEditor(); });
 
-  api.getModes().then(s => { state = s; render(); });
+  api.getModes().then(s => { state = s; render(); preloadSounds(); });
 })();

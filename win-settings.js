@@ -4,7 +4,7 @@
 // Les filtres de couleur (noir et blanc, écran chaud, atténuation) passent par l'API Loupe de
 // Windows : ils disparaissent d'eux-mêmes si l'application s'arrête.
 const { app, powerSaveBlocker } = require('electron');
-const { execFileSync } = require('child_process');
+const { execFile, execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const koffi = require('koffi');
@@ -12,6 +12,7 @@ const koffi = require('koffi');
 const user32 = koffi.load('user32.dll');
 const shell32 = koffi.load('shell32.dll');
 const kernel32 = koffi.load('kernel32.dll');
+const advapi32 = koffi.load('advapi32.dll');
 
 const RECT = koffi.struct('WS_RECT', { left: 'long', top: 'long', right: 'long', bottom: 'long' });
 const APPBARDATA = koffi.struct('APPBARDATA', {
@@ -31,6 +32,10 @@ const GetWindowTextLengthW = user32.func('int __stdcall GetWindowTextLengthW(voi
 const SystemParametersInfoGet = user32.func('bool __stdcall SystemParametersInfoW(uint32_t action, uint32_t param, void *pv, uint32_t ini)');
 const SystemParametersInfoSet = user32.func('bool __stdcall SystemParametersInfoW(uint32_t action, uint32_t param, str16 pv, uint32_t ini)');
 const SHAppBarMessage = shell32.func('uintptr_t __stdcall SHAppBarMessage(uint32_t msg, _Inout_ APPBARDATA *data)');
+// Registre lu et écrit directement (bien plus rapide que de lancer reg.exe à chaque réglage).
+const RegGetValueW = advapi32.func('long __stdcall RegGetValueW(uintptr_t key, str16 sub, str16 name, uint32_t flags, void *type, _Out_ uint32_t *data, _Inout_ uint32_t *size)');
+const RegSetKeyValueW = advapi32.func('long __stdcall RegSetKeyValueW(uintptr_t key, str16 sub, str16 name, uint32_t type, _In_ uint32_t *data, uint32_t size)');
+const HKCU = 0x80000001;
 const OpenProcess = kernel32.func('void * __stdcall OpenProcess(uint32_t access, bool inherit, uint32_t pid)');
 const CloseHandle = kernel32.func('bool __stdcall CloseHandle(void *h)');
 const QueryFullProcessImageNameW = kernel32.func('bool __stdcall QueryFullProcessImageNameW(void *h, uint32_t flags, void *buf, _Inout_ uint32_t *size)');
@@ -61,21 +66,22 @@ function saveJournal() {
 }
 
 // ---------- Registre (via reg.exe) ----------
-const PERSONALIZE = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize';
-const PUSH = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\PushNotifications';
+const PERSONALIZE = 'Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize';
+const PUSH = 'Software\\Microsoft\\Windows\\CurrentVersion\\PushNotifications';
 
 function regGet(key, name) {
-  try {
-    const out = execFileSync('reg', ['query', key, '/v', name], { encoding: 'utf8', windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'] });
-    const m = out.match(/REG_DWORD\s+0x([0-9a-f]+)/i);
-    return m ? parseInt(m[1], 16) : null;
-  } catch { return null; }
+  const out = [0];
+  const size = [4];
+  // 0x10 = RRF_RT_REG_DWORD : seules les valeurs DWORD sont acceptées.
+  return RegGetValueW(HKCU, key, name, 0x10, null, out, size) === 0 ? out[0] : null;
 }
 function regSet(key, name, value) {
-  execFileSync('reg', ['add', key, '/v', name, '/t', 'REG_DWORD', '/d', String(value), '/f'], { windowsHide: true });
+  const err = RegSetKeyValueW(HKCU, key, name, 4, [value >>> 0], 4);
+  if (err !== 0) throw new Error(`Registre inaccessible (${err})`);
 }
+// Prévient les autres applications du changement, sans bloquer Ambiance si l'une d'elles tarde à répondre.
 function broadcast(area) {
-  SendMessageTimeoutW(0xffff, 0x001a, 0, area, 0x0002, 1000, [0]);
+  SendMessageTimeoutW.async(0xffff, 0x001a, 0, area, 0x0002, 1000, [0], () => {});
 }
 
 // ---------- Chaque réglage : lire / écrire ----------
@@ -138,7 +144,7 @@ const SETTINGS = {
     set: (v) => {
       const alias = { saver: 'SCHEME_MAX', balanced: 'SCHEME_BALANCED', perf: 'SCHEME_MIN' }[v] || v;
       // Sur les portables récents, seul le mode « Équilibré » existe : on ignore alors l'erreur.
-      try { execFileSync('powercfg', ['/setactive', alias], { windowsHide: true }); } catch { /* indisponible */ }
+      execFile('powercfg', ['/setactive', alias], { windowsHide: true }, () => { /* indisponible : ignoré */ });
     },
   },
   wallpaper: {
