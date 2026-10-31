@@ -7,4 +7,5 @@ contextBridge.exposeInMainWorld('pet', {
   down: () => ipcRenderer.send('pet-down'),
   up: () => ipcRenderer.send('pet-up'),
   pickerDone: (ok) => ipcRenderer.send('picker-done', ok),
+  info: (action) => ipcRenderer.send('pet-info', action),
 });

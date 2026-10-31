@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <style>
+    html, body { margin: 0; background: transparent; overflow: hidden; user-select: none; }
+    /* Toute l'horloge sert de poignée pour la déplacer. */
+    body { -webkit-app-region: drag; cursor: move; }
+    canvas { display: block; image-rendering: pixelated; }
+  </style>
+</head>
+<body>
+  <canvas id="c" width="210" height="86"></canvas>
+  <script src="clock-face.js"></script>
+</body>
+</html>

@@ -460,16 +460,23 @@
     const SWITCHES = {
       '#set-pet': 'pet', '#set-pet-sound': 'petSound', '#set-tray': 'closeToTray',
       '#set-pet-screen': 'petScreen', '#set-pet-cheese': 'petCheese', '#set-pet-holes': 'petHoles',
+      '#set-pet-reminders': 'petReminders',
     };
+    const CLOCK = { '#set-clock': 'show', '#set-clock-seconds': 'seconds', '#set-clock-date': 'date' };
     const showCfg = c => {
       for (const [sel, key] of Object.entries(SWITCHES)) $(sel).checked = c[key] !== false;
       $('#set-pet-animal').value = c.petAnimal || 'souris';
+      const clock = c.clock || {};
+      for (const [sel, key] of Object.entries(CLOCK)) $(sel).checked = key === 'date' ? clock.date !== false : !!clock[key];
       $('#btn-burrow').textContent = c.burrow ? 'Déplacer le terrier' : 'Placer le terrier';
       $('#btn-burrow-clear').classList.toggle('hidden', !c.burrow);
       $('#burrow-status').textContent = c.burrow
         ? 'Le terrier est placé. Votre compagnon y rentre pour dormir ou quand vous êtes concentré.'
         : 'Choisissez où votre compagnon a sa maison. Il y rentre pour dormir ou quand vous êtes concentré.';
     };
+    for (const [sel, key] of Object.entries(CLOCK)) {
+      $(sel).addEventListener('change', async e => showCfg(await api.setConfig({ clock: { [key]: e.target.checked } })));
+    }
     $('#set-pet-animal').addEventListener('change', async e => showCfg(await api.setConfig({ petAnimal: e.target.value })));
     $('#btn-burrow').addEventListener('click', async () => {
       toast('Cliquez à l\'endroit où placer le terrier');
@@ -565,6 +572,8 @@
   });
 
   api.onTogglePlay(togglePlay);
+  // La bulle du compagnon peut demander d'ouvrir une page (« Ouvrir la liste »).
+  if (api.onNavigate) api.onNavigate(page => { const b = document.querySelector(`.nav-item[data-page="${page}"]`); if (b) b.click(); });
   api.onPause(() => { if (state.playing) pause(); });
 
   renderSounds();

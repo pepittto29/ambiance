@@ -6,6 +6,8 @@ const crypto = require('crypto');
 const pet = require('./pet-main');
 const winSettings = require('./win-settings');
 const modes = require('./modes');
+const tasks = require('./tasks');
+const clock = require('./clock');
 
 // Les erreurs du processus principal sont consignées dans %APPDATA%\Ambiance\main.log.
 function logError(err) {
@@ -34,7 +36,8 @@ const builtinDir = path.join(__dirname, 'src', 'sounds');
 
 // Préférences lues par le processus principal (nécessaires avant l'ouverture de la fenêtre).
 const configPath = () => path.join(app.getPath('userData'), 'config.json');
-let config = { pet: true, petSound: true, closeToTray: true, petScreen: true, petCheese: true, petHoles: true, petAnimal: 'souris', burrow: null, modes: [], activeMode: null };
+let config = { pet: true, petSound: true, closeToTray: true, petScreen: true, petCheese: true, petHoles: true, petAnimal: 'souris', burrow: null, modes: [], activeMode: null,
+  clock: { show: false, seconds: false, date: true, x: null, y: null }, petReminders: true };
 const petOptions = () => ({ screenLines: config.petScreen, cheese: config.petCheese, holes: config.petHoles, animal: config.petAnimal, burrow: config.burrow });
 function loadConfig() {
   try { Object.assign(config, JSON.parse(fs.readFileSync(configPath(), 'utf8'))); } catch { /* première exécution */ }
@@ -72,6 +75,8 @@ function updateTray() {
       click: (item) => setPet(item.checked),
     },
     { label: 'Donner à manger', enabled: config.pet, click: () => pet.giveFood() },
+    { label: 'Où en sont mes tâches ?', enabled: config.pet, click: () => pet.showInfo() },
+    { label: 'Horloge', type: 'checkbox', checked: !!config.clock.show, click: (item) => setClock({ show: item.checked }) },
     { type: 'separator' },
     { label: 'Quitter', click: () => { quitting = true; app.quit(); } },
   ]));
@@ -121,6 +126,26 @@ function cycleMode() {
 
 function modesState() {
   return { modes: modes.list(config.modes), active: config.activeMode || 'normal' };
+}
+
+// ---------- Tâches ----------
+ipcMain.handle('tasks-get', () => tasks.list());
+ipcMain.handle('tasks-add', (_e, t) => tasks.add(t));
+ipcMain.handle('tasks-update', (_e, id, patch) => tasks.update(id, patch));
+ipcMain.handle('tasks-remove', (_e, id) => tasks.remove(id));
+ipcMain.handle('tasks-clear-done', () => tasks.clearDone());
+ipcMain.handle('tasks-import', (_e, items) => tasks.importLegacy(items));
+tasks.events.on('change', list => { if (win) win.webContents.send('tasks-changed', list); });
+
+// L'état de la session Focus est transmis à l'horloge.
+ipcMain.on('focus-state', (_e, s) => clock.setFocus(s));
+
+function setClock(patch) {
+  config.clock = { ...config.clock, ...patch };
+  saveConfig();
+  clock.apply(config.clock, pos => { config.clock = { ...config.clock, ...pos }; saveConfig(); });
+  updateTray();
+  if (win) win.webContents.send('config', config);
 }
 
 ipcMain.handle('modes-get', () => modesState());
@@ -236,6 +261,8 @@ ipcMain.handle('set-config', (_e, patch) => {
   if ('burrow' in patch && patch.burrow === null) config.burrow = null;
   pet.setOptions(petOptions());
   if ('closeToTray' in patch) config.closeToTray = !!patch.closeToTray;
+  if ('petReminders' in patch) { config.petReminders = !!patch.petReminders; pet.setOptions({ reminders: config.petReminders }); }
+  if (patch.clock) setClock(patch.clock);
   saveConfig();
   updateTray();
   return config;
@@ -339,6 +366,9 @@ if (!app.requestSingleInstanceLock()) {
     createTray();
     createWindow();
     if (config.pet) pet.start();
+    pet.setOptions({ reminders: config.petReminders });
+    pet.setHandlers({ openTasks: () => { showWindow(); if (win) win.webContents.send('navigate', 'tasks'); } });
+    setClock({});
   });
   app.on('before-quit', () => {
     quitting = true;

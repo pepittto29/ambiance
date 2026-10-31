@@ -16,7 +16,6 @@
 
   // ======================= Focus =======================
   const cfg = Object.assign({ work: 25, brk: 5, rounds: 4, sound: true }, store.load('focus', {}));
-  let tasks = store.load('tasks', []);
   const history = store.load('focusHistory', {});
   let sessions = store.load('focusSessions', 0);
   const RING = 2 * Math.PI * 52;
@@ -24,7 +23,6 @@
 
   function saveFocus() {
     store.save('focus', cfg);
-    store.save('tasks', tasks);
     store.save('focusHistory', history);
     store.save('focusSessions', sessions);
   }
@@ -92,7 +90,15 @@
     renderFocus();
   }
 
+  let lastFocusState = '';
+
   function renderFocus() {
+    // L'horloge de bureau affiche aussi la session en cours.
+    const fs = JSON.stringify({ running: f.running, phase: f.phase, end: f.running ? f.end : 0 });
+    if (fs !== lastFocusState && window.ambiance && window.ambiance.sendFocusState) {
+      lastFocusState = fs;
+      window.ambiance.sendFocusState(JSON.parse(fs));
+    }
     $('#f-time').textContent = fmt(f.remaining);
     $('#f-phase').textContent = { idle: 'Prêt', work: 'Concentration', break: 'Pause' }[f.phase];
     $('#f-round').textContent = f.phase === 'idle' ? `${cfg.rounds} sessions` : `Session ${f.round} / ${cfg.rounds}`;
@@ -103,22 +109,23 @@
       : `<span class="ico">&#xE768;</span> ${f.phase === 'idle' ? 'Démarrer' : 'Reprendre'}`;
   }
 
+  // La liste est partagée avec la page Tâches et le compagnon (voir tasks-ui.js).
   function renderTasks() {
     const list = $('#task-list');
-    list.replaceChildren(...tasks.map(t => {
+    list.replaceChildren(...TaskStore.list().slice(0, 12).map(t => {
       const li = document.createElement('li');
       li.classList.toggle('done', t.done);
       const cb = document.createElement('input');
       cb.type = 'checkbox';
       cb.checked = t.done;
-      cb.addEventListener('change', () => { t.done = cb.checked; saveFocus(); renderTasks(); });
+      cb.addEventListener('change', () => TaskStore.update(t.id, { done: cb.checked }));
       const span = document.createElement('span');
       span.textContent = t.text;
       const del = document.createElement('button');
       del.className = 'icon-btn ico';
       del.title = 'Supprimer';
       del.textContent = '';
-      del.addEventListener('click', () => { tasks = tasks.filter(x => x !== t); saveFocus(); renderTasks(); });
+      del.addEventListener('click', () => TaskStore.remove(t.id));
       li.append(cb, span, del);
       return li;
     }));
@@ -175,14 +182,12 @@
     e.preventDefault();
     const text = $('#task-input').value.trim();
     if (!text) return;
-    tasks.push({ id: Date.now(), text, done: false });
+    TaskStore.add({ text });
     $('#task-input').value = '';
-    saveFocus();
-    renderTasks();
   });
 
   renderFocus();
-  renderTasks();
+  TaskStore.subscribe(renderTasks);
   renderStats();
 
   // Utilisé par les modes : démarre une session Focus si aucune n'est en cours.

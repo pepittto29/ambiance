@@ -5,7 +5,7 @@ avec toutes les fonctions « premium » incluses gratuitement et une souris de b
 
 ## Installer
 
-Téléchargez `Ambiance Setup 1.1.0.exe` (environ 116 Mo, 273 Mo une fois installé) depuis la page
+Téléchargez `Ambiance Setup 1.2.0.exe` (environ 116 Mo, 273 Mo une fois installé) depuis la page
 [Releases](https://github.com/pepittto29/ambiance/releases) et lancez-le
 (ou compilez-le vous-même avec `npm run dist`, il apparaît alors dans `dist\`). L'installateur crée un raccourci sur le Bureau et dans le menu Démarrer,
 et l'application apparaît dans « Applications installées » de Windows (désinstallation classique).
@@ -21,6 +21,11 @@ et l'application apparaît dans « Applications installées » de Windows (dési
   mode d'alimentation, fond d'écran, mise en veille empêchée, applications distrayantes réduites, sites ou
   programmes à ouvrir. **Tout est restauré** en quittant le mode ou l'application, même après un plantage.
   Changement rapide : icône près de l'horloge ou **Ctrl + Alt + M**.
+- **Tâches** : liste avec priorités (haute, normale, basse), échéances (en rouge si en retard), modification
+  par double-clic, filtres et barre de progression. Partagée avec la page Focus et le compagnon.
+- **Le compagnon et vos tâches** : double-cliquez sur lui pour voir où vous en êtes (progression, prochaine tâche,
+  bouton « C'est fait »). Il fête chaque tâche terminée et vous fait de petits rappels (sauf en mode calme).
+- **Horloge de bureau** pixel art, déplaçable, toujours visible, avec la date ou le temps restant d'une session Focus.
 - **Vrais enregistrements** (licence CC0, domaine public) : pluie, orage, plage, vent, feu de cheminée, café,
   oiseaux, ruisseau, bruit brun… plus une vingtaine d'ambiances dans le **Catalogue** (forêt tropicale, rivière,
   fonds marins, ville, océan, grillons, grenouilles, train, avion, chat qui ronronne, horloge, clavier, feu de camp…).

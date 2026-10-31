@@ -7,6 +7,7 @@ const { BrowserWindow, screen, ipcMain } = require('electron');
 const path = require('path');
 const world = require('./pet-world');
 const memory = require('./pet-memory');
+const tasks = require('./tasks');
 
 let hook = null;
 try { hook = require('uiohook-napi').uIOhook; } catch { /* clics globaux indisponibles */ }
@@ -23,7 +24,10 @@ const FOOD = { souris: 'cheese', hamster: 'cheese', lapin: 'carrot', chat: 'fish
 let petWin = null;
 let loop = null;
 let soundOn = true;
-let opts = { screenLines: true, cheese: true, holes: true, animal: 'souris', burrow: null, energy: 'normal' };
+let opts = { screenLines: true, cheese: true, holes: true, animal: 'souris', burrow: null, energy: 'normal', reminders: true };
+const ANIMAL_NAME = { souris: 'ta souris', hamster: 'ton hamster', lapin: 'ton lapin', chat: 'ton chat' };
+const REMIND_EVERY = 35 * 60000;
+let handlers = { openTasks: () => {} };
 
 // Le mode actif règle l'énergie : « calme » se comporte comme quand l'utilisateur est concentré.
 const calm = () => opts.energy === 'calme' || memory.busy();
@@ -734,6 +738,91 @@ function exitHole() {
   pet.napping = false;
 }
 
+// ---------- Bulle d'information (tâches) ----------
+const INFO_W = 280, INFO_H = 190;
+let infoWin = null;
+let infoUntil = 0;
+let infoHover = false;
+let nextReminder = now() + REMIND_EVERY;
+
+function placeInfo() {
+  if (!infoWin || infoWin.isDestroyed() || !petWin) return false;
+  const b = petWin.getBounds();
+  const a = area();
+  const below = b.y - INFO_H < a.y;
+  const x = clamp(Math.round(b.x + b.width / 2 - INFO_W / 2), a.x, a.x + a.width - INFO_W);
+  const y = below ? b.y + b.height - 6 : b.y - INFO_H + 18;
+  infoWin.setBounds({ x, y, width: INFO_W, height: INFO_H });
+  return below;
+}
+
+function sendInfo(reason) {
+  if (!infoWin || infoWin.isDestroyed()) return;
+  infoWin.webContents.send('pet-state', { summary: tasks.summary(), reason, name: ANIMAL_NAME[opts.animal] || 'ton compagnon', below: placeInfo() });
+}
+
+function showInfo(reason = 'info', ms = 8000) {
+  if (!petWin || pet.hidden) return;
+  infoUntil = now() + ms;
+  if (infoWin && !infoWin.isDestroyed()) { sendInfo(reason); return; }
+  infoWin = new BrowserWindow({
+    width: INFO_W, height: INFO_H, transparent: true, frame: false, resizable: false, movable: false,
+    skipTaskbar: true, focusable: false, hasShadow: false, show: false, alwaysOnTop: true,
+    webPreferences: { preload: path.join(__dirname, 'pet-preload.js') },
+  });
+  infoWin.setAlwaysOnTop(true, 'screen-saver');
+  infoWin.loadFile(path.join(__dirname, 'src', 'pet', 'info.html'));
+  infoWin.once('ready-to-show', () => { sendInfo(reason); infoWin.showInactive(); });
+  infoWin.on('closed', () => { infoWin = null; infoHover = false; });
+  // Le compagnon se tourne vers vous en montrant sa liste.
+  if (pet.mode === 'floor' && !['eat', 'sleep'].includes(pet.act)) {
+    pet.facing = sign(cursor.x - pet.x);
+    setAct('look', ms);
+  }
+}
+
+function closeInfo() {
+  if (infoWin && !infoWin.isDestroyed()) infoWin.destroy();
+  infoWin = null;
+}
+
+function updateInfo() {
+  if (infoWin && !infoWin.isDestroyed()) {
+    placeInfo();
+    if (!infoHover && now() > infoUntil) closeInfo();
+  }
+  const t = now();
+  if (opts.reminders && t > nextReminder) {
+    nextReminder = t + REMIND_EVERY;
+    if (tasks.summary().left > 0 && !calm() && !pet.hidden && pet.act !== 'sleep') {
+      emote('!', 1500, 'wide');
+      showInfo('rappel', 7000);
+    }
+  }
+}
+
+ipcMain.on('pet-info', (_e, action) => {
+  if (action === 'hover') { infoHover = true; return; }
+  if (action === 'leave') { infoHover = false; infoUntil = Math.max(infoUntil, now() + 2500); return; }
+  if (action === 'close') { closeInfo(); return; }
+  if (action === 'open') { closeInfo(); handlers.openTasks(); return; }
+  if (action === 'done') {
+    const next = tasks.summary().next;
+    if (next) tasks.update(next.id, { done: true });
+    infoUntil = now() + 5000;
+    sendInfo(tasks.summary().left === 0 ? 'bravo' : 'info');
+  }
+});
+
+// Une tâche cochée (n'importe où dans l'application) : le compagnon fête ça.
+tasks.events.on('done', (_task, allDone) => {
+  if (!petWin || pet.hidden) return;
+  pet.sound++;
+  if (pet.mode === 'floor' && !pet.held) setAct('dance', allDone ? 3600 : 2000);
+  emote(allDone ? '★' : pick(['♥', '✦', '♪']), allDone ? 3600 : 1800, 'happy');
+  if (allDone) showInfo('bravo', 6000);
+});
+
 // ---------- Boucle principale ----------
 function tick() {
   const t = now();
@@ -762,6 +851,7 @@ function tick() {
   }
   updateFood(dt);
   updateHoles(dt);
+  updateInfo();
 
   if (pet.hidden) {
     if (t > pet.until) exitHole();
@@ -858,7 +948,21 @@ function onGlobalClick(e) {
 
 function onKey() { memory.keyPressed(); pet.lastActive = now(); }
 
+let clickTimer = null;
+
 function onClickPet() {
+  if (clickTimer) {
+    clearTimeout(clickTimer);
+    clickTimer = null;
+    pet.sound++;
+    emote('✦', 1200, 'happy');
+    showInfo('info');
+    return;
+  }
+  clickTimer = setTimeout(() => { clickTimer = null; singleClick(); }, 280);
+}
+
+function singleClick() {
   const t = now();
   pet.lastActive = t;
   pet.sound++;
@@ -999,6 +1103,7 @@ function stop() {
   holes = [];
   if (burrow) closeWin(burrow.win);
   burrow = null;
+  closeInfo();
   closeWin(petWin);
   petWin = null;
 }
@@ -1007,6 +1112,8 @@ module.exports = {
   start,
   stop,
   pickBurrow,
+  showInfo: () => showInfo('info'),
+  setHandlers(h) { handlers = { ...handlers, ...h }; },
   get running() { return !!petWin; },
   setSound(on) { soundOn = !!on; },
   setOptions(o) {

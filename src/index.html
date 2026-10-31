@@ -17,6 +17,7 @@
       <button class="nav-item active" data-page="modes"><span class="ico">&#xE945;</span><span class="lbl">Modes</span></button>
       <button class="nav-item" data-page="sounds"><span class="ico">&#xEC4F;</span><span class="lbl">Sons</span></button>
       <button class="nav-item" data-page="catalog"><span class="ico">&#xE753;</span><span class="lbl">Catalogue</span></button>
+      <button class="nav-item" data-page="tasks"><span class="ico">&#xE73A;</span><span class="lbl">Tâches</span></button>
       <button class="nav-item" data-page="focus"><span class="ico">&#xE916;</span><span class="lbl">Focus</span></button>
       <button class="nav-item" data-page="channels"><span class="ico">&#xE714;</span><span class="lbl">Chaînes</span></button>
       <button class="nav-item" data-page="breath"><span class="ico">&#xE9D9;</span><span class="lbl">Respiration</span></button>
@@ -56,6 +57,42 @@
           </div>
         </header>
         <div id="catalog-grid" class="grid wide"></div>
+      </section>
+
+      <section id="page-tasks" class="page">
+        <header class="page-head">
+          <div>
+            <h1>Tâches</h1>
+            <p class="sub">Votre compagnon vous les rappelle. Double-cliquez sur lui pour voir où vous en êtes.</p>
+          </div>
+        </header>
+        <div class="card tk-card">
+          <form id="tk-form" class="tk-form">
+            <input id="tk-text" type="text" placeholder="Nouvelle tâche…" maxlength="200">
+            <select id="tk-priority" title="Priorité">
+              <option value="haute">🔴 Haute</option>
+              <option value="normale" selected>🟡 Normale</option>
+              <option value="basse">🟢 Basse</option>
+            </select>
+            <select id="tk-due" title="Échéance">
+              <option value="">Sans date</option>
+              <option value="today">Aujourd'hui</option>
+              <option value="tomorrow">Demain</option>
+              <option value="date">Choisir…</option>
+            </select>
+            <input id="tk-date" type="date" class="hidden">
+            <button class="btn accent"><span class="ico">&#xE710;</span> Ajouter</button>
+          </form>
+          <div class="tk-progress"><div class="tk-bar"><i id="tk-bar"></i></div><span id="tk-count"></span></div>
+          <div class="tk-toolbar">
+            <button class="tk-filter on" data-filter="todo">À faire</button>
+            <button class="tk-filter" data-filter="done">Terminées</button>
+            <button class="tk-filter" data-filter="all">Toutes</button>
+            <span class="grow"></span>
+            <button id="tk-clear" class="btn hidden">Effacer les terminées</button>
+          </div>
+          <ul id="tk-list" class="tk-list"></ul>
+        </div>
       </section>
 
       <section id="page-focus" class="page">
@@ -186,6 +223,19 @@
           <div><div class="s-title">Fermer dans la zone de notification</div><div class="s-sub">La croix coupe le son et range l'application près de l'horloge : seul le compagnon de bureau continue.</div></div>
           <label class="switch"><input type="checkbox" id="set-tray"><span></span></label>
         </div>
+        <h2>Horloge de bureau</h2>
+        <div class="setting">
+          <div><div class="s-title">Afficher l'horloge</div><div class="s-sub">Une petite horloge pixel art toujours visible. Faites-la glisser où vous voulez ; elle affiche aussi le temps restant d'une session Focus.</div></div>
+          <label class="switch"><input type="checkbox" id="set-clock"><span></span></label>
+        </div>
+        <div class="setting">
+          <div><div class="s-title">Secondes</div></div>
+          <label class="switch"><input type="checkbox" id="set-clock-seconds"><span></span></label>
+        </div>
+        <div class="setting">
+          <div><div class="s-title">Date</div></div>
+          <label class="switch"><input type="checkbox" id="set-clock-date"><span></span></label>
+        </div>
         <h2>Compagnon de bureau</h2>
         <div class="setting">
           <div><div class="s-title">Afficher le compagnon</div><div class="s-sub">Un petit animal rétro se promène sur tout Windows. Caressez-le en le survolant, cliquez dessus, attrapez-le ou lancez-le.</div></div>
@@ -222,6 +272,10 @@
         <div class="setting">
           <div><div class="s-title">Trous aléatoires</div><div class="s-sub">De temps en temps, un trou s'ouvre sur le bas de l'écran : votre compagnon peut y plonger et ressortir par son terrier.</div></div>
           <label class="switch"><input type="checkbox" id="set-pet-holes"><span></span></label>
+        </div>
+        <div class="setting">
+          <div><div class="s-title">Rappels de tâches</div><div class="s-sub">De temps en temps, votre compagnon vous montre ce qu'il reste à faire (jamais en mode Focus calme).</div></div>
+          <label class="switch"><input type="checkbox" id="set-pet-reminders"><span></span></label>
         </div>
         <h2>Crédits</h2>
         <details class="setting credits"><summary class="s-title">Enregistrements sonores (Creative Commons 0)</summary><ul id="credits"></ul></details>
@@ -362,6 +416,7 @@
   <script src="audio.js"></script>
   <script src="screensaver.js"></script>
   <script src="app.js"></script>
+  <script src="tasks-ui.js"></script>
   <script src="premium.js"></script>
   <script src="modes-ui.js"></script>
 </body>

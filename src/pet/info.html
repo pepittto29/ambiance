@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <style>
+    html, body { margin: 0; background: transparent; overflow: hidden; user-select: none; font: 13px 'Segoe UI Variable Text', 'Segoe UI', sans-serif; }
+    /* Bulle de dialogue rétro, à bords « pixel ». */
+    .bubble {
+      position: absolute; left: 6px; right: 6px; top: 6px;
+      padding: 12px 14px 12px; background: #fffdf4; color: #2a2238;
+      box-shadow: 0 0 0 3px #2a2238, 6px 6px 0 3px rgba(0, 0, 0, 0.25);
+    }
+    .tail { position: absolute; width: 12px; height: 12px; background: #fffdf4; box-shadow: 3px 3px 0 0 #2a2238; transform: rotate(45deg); left: calc(50% - 6px); bottom: -8px; }
+    .below .tail { top: -8px; bottom: auto; box-shadow: -3px -3px 0 0 #2a2238; }
+    .title { font-weight: 700; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+    .x { cursor: pointer; padding: 0 4px; opacity: 0.6; }
+    .x:hover { opacity: 1; }
+    .msg { margin: 4px 0 8px; color: #4a4258; }
+    .bar { height: 10px; background: #e7e1d0; box-shadow: inset 0 0 0 2px #2a2238; }
+    .bar i { display: block; height: 100%; background: repeating-linear-gradient(90deg, #6ccb5f 0 6px, #58b34c 6px 12px); box-shadow: inset 0 0 0 2px #2a2238; }
+    .next { margin-top: 8px; padding: 6px 8px; background: #f3edda; border-left: 4px solid #f6c945; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .next b { color: #8a6d00; font-weight: 600; }
+    .actions { display: flex; gap: 6px; margin-top: 8px; }
+    button {
+      flex: 1; height: 26px; border: 0; font: 600 12px 'Segoe UI', sans-serif; cursor: pointer;
+      background: #2a2238; color: #fff; box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+    }
+    button.ok { background: #3f9b5a; }
+    button:active { transform: translate(1px, 1px); box-shadow: none; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div id="b" class="bubble">
+    <div class="title"><span id="title">Tes tâches</span><span id="x" class="x">✕</span></div>
+    <div id="msg" class="msg"></div>
+    <div id="barbox" class="bar"><i id="bar"></i></div>
+    <div id="next" class="next"></div>
+    <div class="actions">
+      <button id="done" class="ok">✓ C'est fait</button>
+      <button id="open">Ouvrir la liste</button>
+    </div>
+    <div class="tail"></div>
+  </div>
+  <script src="info.js"></script>
+</body>
+</html>
