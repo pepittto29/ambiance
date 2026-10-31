@@ -1,9 +1,11 @@
-const { app, BrowserWindow, ipcMain, dialog, nativeTheme, systemPreferences, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, nativeTheme, systemPreferences, Tray, Menu, nativeImage, shell, globalShortcut, Notification } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
 const pet = require('./pet-main');
+const winSettings = require('./win-settings');
+const modes = require('./modes');
 
 // Les erreurs du processus principal sont consignées dans %APPDATA%\Ambiance\main.log.
 function logError(err) {
@@ -32,7 +34,7 @@ const builtinDir = path.join(__dirname, 'src', 'sounds');
 
 // Préférences lues par le processus principal (nécessaires avant l'ouverture de la fenêtre).
 const configPath = () => path.join(app.getPath('userData'), 'config.json');
-let config = { pet: true, petSound: true, closeToTray: true, petScreen: true, petCheese: true, petHoles: true, petAnimal: 'souris', burrow: null };
+let config = { pet: true, petSound: true, closeToTray: true, petScreen: true, petCheese: true, petHoles: true, petAnimal: 'souris', burrow: null, modes: [], activeMode: null };
 const petOptions = () => ({ screenLines: config.petScreen, cheese: config.petCheese, holes: config.petHoles, animal: config.petAnimal, burrow: config.burrow });
 function loadConfig() {
   try { Object.assign(config, JSON.parse(fs.readFileSync(configPath(), 'utf8'))); } catch { /* première exécution */ }
@@ -58,6 +60,14 @@ function updateTray() {
     { label: playing ? 'Pause' : 'Lecture', click: () => win && win.webContents.send('toggle-play') },
     { type: 'separator' },
     {
+      label: 'Mode',
+      submenu: modes.list(config.modes).map(m => ({
+        label: `${m.emoji}  ${m.name}`, type: 'radio', checked: (config.activeMode || 'normal') === m.id,
+        click: () => activateMode(m.id),
+      })),
+    },
+    { type: 'separator' },
+    {
       label: 'Compagnon de bureau', type: 'checkbox', checked: config.pet,
       click: (item) => setPet(item.checked),
     },
@@ -81,6 +91,65 @@ function setPet(on) {
   updateTray();
   if (win) win.webContents.send('config', config);
 }
+
+// ---------- Modes ----------
+function activateMode(id, { notify = false } = {}) {
+  const all = modes.list(config.modes);
+  const mode = all.find(m => m.id === id) || all[0];
+  const isNormal = mode.id === 'normal';
+  try { winSettings.applyWindows(mode.win); } catch (e) { logError(e); }
+  try { winSettings.setScreen(mode.screen); } catch (e) { logError(e); }
+  pet.setOptions({ energy: mode.pet.energy });
+  if (mode.minimize.length) { try { winSettings.minimizeApps(mode.minimize); } catch (e) { logError(e); } }
+  for (const item of mode.launch) {
+    if (/^https?:\/\//i.test(item)) shell.openExternal(item);
+    else if (item) shell.openPath(item);
+  }
+  config.activeMode = isNormal ? null : mode.id;
+  saveConfig();
+  updateTray();
+  if (win) win.webContents.send('mode-changed', mode);
+  if (notify && Notification.isSupported()) new Notification({ title: 'Ambiance', body: `Mode ${mode.name}`, silent: true }).show();
+  return mode;
+}
+
+function cycleMode() {
+  const all = modes.list(config.modes);
+  const i = all.findIndex(m => m.id === (config.activeMode || 'normal'));
+  activateMode(all[(i + 1) % all.length].id, { notify: true });
+}
+
+function modesState() {
+  return { modes: modes.list(config.modes), active: config.activeMode || 'normal' };
+}
+
+ipcMain.handle('modes-get', () => modesState());
+ipcMain.handle('mode-activate', (_e, id) => { activateMode(id); return modesState(); });
+ipcMain.handle('mode-save', (_e, mode) => {
+  const m = modes.normalize({ ...mode, id: mode.id || 'custom-' + crypto.randomUUID().slice(0, 8) });
+  config.modes = [...config.modes.filter(x => x.id !== m.id), m];
+  saveConfig();
+  // Un mode modifié pendant qu'il est actif est réappliqué tout de suite.
+  if ((config.activeMode || 'normal') === m.id) activateMode(m.id);
+  updateTray();
+  return modesState();
+});
+ipcMain.handle('mode-delete', (_e, id) => {
+  if ((config.activeMode || 'normal') === id) activateMode('normal');
+  config.modes = config.modes.filter(m => m.id !== id);
+  saveConfig();
+  updateTray();
+  return modesState();
+});
+ipcMain.handle('running-apps', () => { try { return winSettings.runningApps(); } catch { return []; } });
+ipcMain.handle('pick-image', async () => {
+  const res = await dialog.showOpenDialog(win, {
+    title: "Choisir un fond d'écran",
+    properties: ['openFile'],
+    filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'bmp'] }],
+  });
+  return res.canceled ? null : res.filePaths[0];
+});
 
 function overlay() {
   const dark = nativeTheme.shouldUseDarkColors;
@@ -260,13 +329,26 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     app.setAppUserModelId('com.pierre.ambiance');
     loadConfig();
+    // Remet Windows d'origine si l'application avait été fermée brutalement pendant un mode.
+    try { winSettings.init(); } catch (e) { logError(e); }
+    config.activeMode = null;
+    saveConfig();
+    globalShortcut.register('Control+Alt+M', cycleMode);
     pet.setSound(config.petSound);
     pet.setOptions(petOptions());
     createTray();
     createWindow();
     if (config.pet) pet.start();
   });
-  app.on('before-quit', () => { quitting = true; pet.stop(); });
+  app.on('before-quit', () => {
+    quitting = true;
+    pet.stop();
+    // En quittant, tous les réglages de Windows modifiés par un mode sont restaurés.
+    try { winSettings.restoreAll(); } catch (e) { logError(e); }
+    config.activeMode = null;
+    saveConfig();
+  });
+  app.on('will-quit', () => globalShortcut.unregisterAll());
   // La souris et la zone de notification gardent l'application en vie.
   app.on('window-all-closed', () => { if (!config.pet && !config.closeToTray) app.quit(); });
 }

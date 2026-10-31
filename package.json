@@ -1,7 +1,7 @@
 {
   "name": "ambiance",
   "productName": "Ambiance",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Bruits blancs et ambiances sonores pour se concentrer, se détendre et dormir.",
   "main": "main.js",
   "author": "Pierre",
@@ -13,7 +13,8 @@
   },
   "devDependencies": {
     "electron": "^33.2.1",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "ffmpeg-static": "^5.2.0"
   },
   "build": {
     "appId": "com.pierre.ambiance",
@@ -29,8 +30,15 @@
       "pet-world.js",
       "pet-win32.js",
       "pet-memory.js",
+      "modes.js",
+      "win-settings.js",
       "src/**/*",
-      "assets/**/*"
+      "assets/**/*",
+      "!node_modules/koffi/{src,vendor,doc}/**",
+      "!node_modules/koffi/build/koffi/!(win32_x64|win32_arm64)/**",
+      "!node_modules/uiohook-napi/prebuilds/!(win32-x64)/**",
+      "!node_modules/uiohook-napi/{src,libuiohook,build}/**",
+      "!src/sounds/credits-freesound.json"
     ],
     "asarUnpack": [
       "node_modules/uiohook-napi/**",
@@ -47,7 +55,11 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Ambiance"
-    }
+    },
+    "electronLanguages": [
+      "fr",
+      "en-US"
+    ]
   },
   "dependencies": {
     "koffi": "^2.9.0",

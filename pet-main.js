@@ -23,7 +23,10 @@ const FOOD = { souris: 'cheese', hamster: 'cheese', lapin: 'carrot', chat: 'fish
 let petWin = null;
 let loop = null;
 let soundOn = true;
-let opts = { screenLines: true, cheese: true, holes: true, animal: 'souris', burrow: null };
+let opts = { screenLines: true, cheese: true, holes: true, animal: 'souris', burrow: null, energy: 'normal' };
+
+// Le mode actif règle l'énergie : « calme » se comporte comme quand l'utilisateur est concentré.
+const calm = () => opts.energy === 'calme' || memory.busy();
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -166,7 +169,7 @@ function setGoal(type, ms, extra = {}) {
 
 function pickGoal() {
   const t = now();
-  const busy = memory.busy();
+  const busy = calm();
   if (opts.cheese && food && food.landed) {
     setGoal('food', 120000, { reach: 24, run: true });
     emote(food.kind, 2000);
@@ -268,7 +271,7 @@ function idleActivity() {
   const t = now();
   const p = world.byId(pet.support);
   if (!p) return;
-  const busy = memory.busy();
+  const busy = calm();
   const idleFor = t - pet.lastActive;
   // Il ne reste pas planté sous le curseur là où l'utilisateur travaille : il se pousse.
   if (memory.heatAt(pet.x, pet.y) > 0.6 && Math.hypot(cursor.x - pet.x, cursor.y - pet.y) < 220 && t - cursor.moved < 3000) {
@@ -283,6 +286,19 @@ function idleActivity() {
     else if (r < 0.75 && idleFor > 30000) { setAct('sleep', rand(20000, 40000)); emote('Z', 1e9, 'closed'); }
     else { const tx = quietSpot(p, pet.x, 120); if (pathClear(p, pet.x, tx)) walkTo(tx); else setAct('idle', 3000); }
     return;
+  }
+  // Mode joueur : il bouge, saute et danse bien plus souvent.
+  if (opts.energy === 'joueur' && r < 0.5) {
+    const q = Math.random();
+    if (q < 0.35) { setAct('dance', 2400); emote(pick(['♪', '✦', '♥']), 2400, 'happy'); return; }
+    if (q < 0.7) {
+      const options = world.jumpTargets(pet.x, p.y, 300, 220, 240).filter(o => o.id !== p.id);
+      const o = options.length ? pick(options) : null;
+      const ox = o ? clamp(pet.x + rand(-280, 280), o.x1 + 10, o.x2 - 10) : 0;
+      if (o && world.solidAt(o, ox)) { jumpTo(ox, o.y); return; }
+    }
+    const tx = clamp(pet.x + rand(-300, 300), p.x1 + 10, p.x2 - 10);
+    if (pathClear(p, pet.x, tx)) { walkTo(tx, true); return; }
   }
   if (r < 0.3) {
     const tx = quietSpot(p, pet.x, 220);
@@ -825,7 +841,7 @@ function onGlobalClick(e) {
     if (d < 400) { setAct('idle', 700); emote('!', 900, 'wide'); }
     return;
   }
-  if (pet.mode !== 'floor' || pet.act === 'eat' || memory.busy()) return;
+  if (pet.mode !== 'floor' || pet.act === 'eat' || calm()) return;
   // Il ne réagit pas à chaque clic : parfois il va voir, parfois il regarde seulement.
   if (d < 1200 && Math.random() < 0.3) {
     const s = world.surfaceBelow(p.x, p.y - 4);

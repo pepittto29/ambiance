@@ -14,7 +14,8 @@
 
   <div id="app">
     <nav id="nav">
-      <button class="nav-item active" data-page="sounds"><span class="ico">&#xEC4F;</span><span class="lbl">Sons</span></button>
+      <button class="nav-item active" data-page="modes"><span class="ico">&#xE945;</span><span class="lbl">Modes</span></button>
+      <button class="nav-item" data-page="sounds"><span class="ico">&#xEC4F;</span><span class="lbl">Sons</span></button>
       <button class="nav-item" data-page="catalog"><span class="ico">&#xE753;</span><span class="lbl">Catalogue</span></button>
       <button class="nav-item" data-page="focus"><span class="ico">&#xE916;</span><span class="lbl">Focus</span></button>
       <button class="nav-item" data-page="channels"><span class="ico">&#xE714;</span><span class="lbl">Chaînes</span></button>
@@ -25,7 +26,18 @@
     </nav>
 
     <main id="content">
-      <section id="page-sounds" class="page active">
+      <section id="page-modes" class="page active">
+        <header class="page-head">
+          <div>
+            <h1>Modes</h1>
+            <p class="sub">Un clic change l'ambiance, le compagnon et les réglages de Windows. Tout est remis en place en quittant le mode. Raccourci : Ctrl + Alt + M.</p>
+          </div>
+          <button id="btn-new-mode" class="btn"><span class="ico">&#xE710;</span> Créer un mode</button>
+        </header>
+        <div id="mode-grid" class="mode-grid"></div>
+      </section>
+
+      <section id="page-sounds" class="page">
         <header class="page-head">
           <div>
             <h1>Sons</h1>
@@ -259,6 +271,79 @@
     <button id="timer-cancel" class="btn full hidden">Annuler le minuteur</button>
   </div>
 
+  <div id="mode-editor" class="modal hidden">
+    <div class="dialog wide">
+      <h3 id="me-title">Modifier le mode</h3>
+      <div class="me-body">
+        <div class="me-section">
+          <div class="me-row">
+            <label class="me-field grow">Nom<input id="me-name" type="text" maxlength="30"></label>
+            <label class="me-field small">Icône<input id="me-emoji" type="text" maxlength="4"></label>
+            <label class="me-field small">Couleur<input id="me-color" type="color"></label>
+          </div>
+          <label class="me-field">Description<input id="me-desc" type="text" maxlength="90"></label>
+        </div>
+        <div class="me-section">
+          <h4>Ambiance sonore</h4>
+          <select id="me-sound">
+            <option value="keep">Ne pas changer la lecture en cours</option>
+            <option value="current">Utiliser le mixage en cours d'écoute</option>
+            <option value="saved">Garder les sons enregistrés pour ce mode</option>
+            <option value="silence">Couper le son</option>
+          </select>
+          <p id="me-sound-list" class="sub small"></p>
+          <label class="me-check"><input type="checkbox" id="me-focus"> Lancer une session Focus (Pomodoro)</label>
+        </div>
+        <div class="me-section">
+          <h4>Compagnon</h4>
+          <select id="me-energy">
+            <option value="calme">Calme : discret, se repose souvent</option>
+            <option value="normal">Normal</option>
+            <option value="joueur">Joueur : saute et danse beaucoup</option>
+          </select>
+        </div>
+        <div class="me-section">
+          <h4>Écran</h4>
+          <label class="me-check"><input type="checkbox" id="me-gray"> Noir et blanc (aide à décrocher des distractions)</label>
+          <label class="me-range">Écran chaud (moins de lumière bleue)<input type="range" id="me-warm" min="0" max="100"></label>
+          <label class="me-range">Atténuation<input type="range" id="me-dim" min="0" max="70"></label>
+        </div>
+        <div class="me-section">
+          <h4>Windows</h4>
+          <div class="me-row">
+            <label class="me-field grow">Thème<select id="me-theme"><option value="">Ne pas changer</option><option value="dark">Sombre</option><option value="light">Clair</option></select></label>
+            <label class="me-field grow">Alimentation<select id="me-power"><option value="">Ne pas changer</option><option value="saver">Économie d'énergie</option><option value="balanced">Équilibré</option><option value="perf">Performances</option></select></label>
+          </div>
+          <label class="me-check"><input type="checkbox" id="me-notif"> Couper les notifications</label>
+          <label class="me-check"><input type="checkbox" id="me-icons"> Masquer les icônes du bureau</label>
+          <label class="me-check"><input type="checkbox" id="me-taskbar"> Masquer automatiquement la barre des tâches</label>
+          <label class="me-check"><input type="checkbox" id="me-awake"> Empêcher la mise en veille de l'écran</label>
+          <div class="me-row me-wall">
+            <span>Fond d'écran : <b id="me-wall-name">ne pas changer</b></span>
+            <button id="me-wall-pick" class="btn">Choisir…</button>
+            <button id="me-wall-clear" class="btn">Ne pas changer</button>
+          </div>
+        </div>
+        <div class="me-section">
+          <h4>Applications à réduire en entrant dans le mode</h4>
+          <div id="me-apps" class="me-apps"></div>
+          <div class="me-row"><input id="me-app-add" type="text" placeholder="Autre application (ex. discord.exe)"><button id="me-app-add-btn" class="btn">Ajouter</button></div>
+        </div>
+        <div class="me-section">
+          <h4>Ouvrir au lancement</h4>
+          <textarea id="me-launch" rows="3" placeholder="Un site ou un programme par ligne, ex. https://open.spotify.com"></textarea>
+        </div>
+      </div>
+      <div class="me-actions">
+        <button id="me-delete" class="btn danger">Supprimer</button>
+        <button id="me-reset" class="btn">Réinitialiser</button>
+        <span class="grow"></span>
+        <button id="me-cancel" class="btn">Annuler</button>
+        <button id="me-save" class="btn accent">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modal" class="modal hidden">
     <div class="dialog">
       <h3 id="modal-title"></h3>
@@ -278,5 +363,6 @@
   <script src="screensaver.js"></script>
   <script src="app.js"></script>
   <script src="premium.js"></script>
+  <script src="modes-ui.js"></script>
 </body>
 </html>

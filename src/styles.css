@@ -436,7 +436,7 @@ select option { background: var(--flyout); }
 }
 .dialog h3 { margin: 0 0 12px; font-size: 20px; font-weight: 600; }
 .dialog p { margin: 0 0 16px; color: var(--text-2); }
-.dialog input {
+#modal-input {
   width: 100%;
   height: 34px;
   padding: 0 10px;
@@ -605,3 +605,61 @@ details.credits summary { cursor: pointer; padding: 10px 0; }
 ::-webkit-scrollbar-thumb { border-radius: 4px; background: var(--subtle-2); }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-2); }
 .active-list { scrollbar-gutter: stable; padding-bottom: 4px; }
+
+/* Page Modes */
+.mode-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.mode-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 210px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: linear-gradient(140deg, var(--c1), var(--c2));
+  color: #fff;
+  border: 1px solid var(--stroke);
+  transition: transform 0.15s, box-shadow 0.15s;
+  cursor: pointer;
+}
+.mode-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.mode-card.active { outline: 3px solid var(--accent); outline-offset: 2px; }
+.mode-card .mc-top { display: flex; align-items: flex-start; justify-content: space-between; padding: 16px 16px 0; }
+.mode-card .mc-emoji { font-size: 40px; line-height: 1; }
+.mode-card .mc-badge { padding: 3px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.92); color: #1a1a1a; font-size: 12px; font-weight: 600; }
+.mode-card .mc-name { padding: 10px 16px 0; font-size: 20px; font-weight: 600; }
+.mode-card .mc-desc { padding: 4px 16px 0; font-size: 13px; opacity: 0.9; }
+.mode-card .mc-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 16px 0; }
+.mode-card .mc-chip { padding: 2px 8px; border-radius: 6px; background: rgba(0, 0, 0, 0.25); font-size: 12px; }
+.mode-card .mc-foot { display: flex; justify-content: flex-end; gap: 4px; margin-top: auto; padding: 10px; }
+.mode-card .mc-foot .icon-btn { color: #fff; background: rgba(0, 0, 0, 0.2); font-size: 14px; }
+.mode-card .mc-foot .icon-btn:hover { background: rgba(0, 0, 0, 0.35); }
+.mode-card.new { background: var(--card); color: var(--text); border: 2px dashed var(--stroke); align-items: center; justify-content: center; gap: 8px; }
+.mode-card.new .ico { font-size: 28px; }
+
+/* Éditeur de mode */
+.dialog.wide { width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 60px); display: flex; flex-direction: column; padding: 0; }
+.dialog.wide h3 { padding: 22px 24px 0; }
+.me-body { overflow-y: auto; padding: 0 24px; }
+.me-section { padding: 14px 0; border-bottom: 1px solid var(--stroke); display: flex; flex-direction: column; gap: 8px; }
+.me-section:last-child { border-bottom: 0; }
+.me-section h4 { margin: 0; font-size: 14px; font-weight: 600; }
+.me-row { display: flex; gap: 10px; align-items: flex-end; }
+.me-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-2); }
+.me-field.grow, .grow { flex: 1; }
+.me-field.small { width: 72px; }
+.me-field input[type=text], .me-row > input[type=text], .me-body select, .me-body textarea {
+  height: 32px; padding: 0 10px; border-radius: 5px; border: 1px solid var(--stroke); background: var(--card); color: var(--text); outline: none; user-select: text; font: inherit;
+}
+.me-body textarea { height: auto; padding: 8px 10px; resize: vertical; }
+.me-row > input[type=text] { flex: 1; }
+.me-field input[type=color] { width: 100%; height: 32px; padding: 2px; border-radius: 5px; border: 1px solid var(--stroke); background: var(--card); }
+.me-check { display: flex; align-items: center; gap: 8px; }
+.me-check input { accent-color: var(--accent); width: 16px; height: 16px; }
+.me-range { display: grid; grid-template-columns: 1fr 180px; align-items: center; gap: 12px; }
+.me-wall { align-items: center; }
+.me-wall span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.me-apps { display: flex; flex-wrap: wrap; gap: 6px; }
+.me-app { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--stroke); background: var(--card); font-size: 12px; cursor: pointer; }
+.me-app.on { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+.me-actions { display: flex; gap: 8px; padding: 16px 24px; border-top: 1px solid var(--stroke); }
+.sub.small { font-size: 12px; margin: 0; }

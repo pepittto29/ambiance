@@ -57,7 +57,7 @@
   }
 
   function completePhase(finished) {
-    Engine.oneShot(f.phase === 'work' ? 'bell.wav' : 'chime.mp3').catch(() => {});
+    Engine.oneShot(f.phase === 'work' ? 'bell.ogg' : 'chime.ogg').catch(() => {});
     if (f.phase === 'work') {
       if (finished) {
         history[dayKey()] = (history[dayKey()] || 0) + cfg.work;
@@ -185,6 +185,9 @@
   renderTasks();
   renderStats();
 
+  // Utilisé par les modes : démarre une session Focus si aucune n'est en cours.
+  window.Premium = { startFocus() { if (!f.running) focusStart(); } };
+
   // ======================= Chaînes =======================
   const CHANNELS = [
     { name: "Nuit d'orage", emoji: '⛈️', colors: ['#3c3f78', '#0d0f24'], scene: 'storm', sounds: { thunder: 0.8, rain: 0.55 } },
@@ -269,7 +272,7 @@
     $('#b-count').textContent = '';
     $('#b-remaining').textContent = finished ? 'Belle séance. Prenez un instant avant de reprendre.' : '';
     $('#b-start').innerHTML = '<span class="ico">&#xE768;</span> Commencer';
-    if (finished) Engine.oneShot('chime.mp3').catch(() => {});
+    if (finished) Engine.oneShot('chime.ogg').catch(() => {});
   }
 
   $('#b-start').addEventListener('click', () => (b.running ? breathStop(false) : breathStart()));
