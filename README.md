@@ -78,6 +78,13 @@ et l'application apparaît dans « Applications installées » de Windows (dési
   - Émotions : joie, amour, curiosité, surprise, peur, colère, tristesse, ennui, faim, étourdissement, sommeil.
   - À manger tous les quarts d'heure (ou « Donner à manger » depuis l'icône près de l'horloge).
   - L'analyse de l'écran se fait localement, en mémoire ; rien n'est enregistré ni envoyé. Désactivable.
+- **Mode Course** : le compagnon devient une voiture de sport en pixel art, à choisir parmi 50 modèles
+  dans la page Garage. Elle roule vite, dérape aux demi-tours en laissant de la fumée et des traces de pneus
+  qui s'estompent en une minute, klaxonne quand on clique dessus et dort dans son garage (placé comme le
+  terrier). De temps en temps (ou avec « Lancer une course »), une piste apparaît autour de l'écran :
+  feux de départ, trois tours avec dérapages dans les virages, puis la piste disparaît. Deux sons
+  synthétisés l'accompagnent : **Circuit** (tribunes et voitures qui passent) et **Garage** (moteur au ralenti,
+  outils). Les voitures sont dessinées par l'application, sans logo de marque.
 - **Mini-jeux** (page Jeux), qui partagent une même réserve d'étoiles ★ :
   - **Le tricot** : chaque touche tapée ajoute une maille. Quand le patron est fini, le compagnon a tricoté un
     chapeau (20 à collectionner : communs, rares, épiques, légendaires) et le porte aussitôt. Un doublon est

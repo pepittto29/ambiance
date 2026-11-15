@@ -18,6 +18,8 @@ const SOUNDS = [
   { id: 'pink', name: 'Bruit rose', emoji: '🌸', colors: ['#f29bbd', '#8e3b5f'], builtin: true },
   { id: 'chiptune', name: 'Chiptune', emoji: '👾', colors: ['#ff4fa3', '#2a0f45'], builtin: true, scene: 'night' },
   { id: 'arcade', name: 'Salle d\'arcade', emoji: '🕹️', colors: ['#7c4dff', '#140c3a'], builtin: true },
+  { id: 'circuit', name: 'Circuit', emoji: '🏁', colors: ['#e53935', '#2b0b0b'], builtin: true },
+  { id: 'garage', name: 'Garage', emoji: '🔧', colors: ['#78909c', '#1c262b'], builtin: true },
   { id: 'brown', name: 'Bruit brun', emoji: '🟤', colors: ['#a1887f', '#4e342e'], builtin: true, file: 'whitenoise.ogg', credit: 'Brown Noise by theundecided -- https://freesound.org/s/165056/' },
   // Catalogue
   { id: 'rainforest', name: 'Forêt tropicale', emoji: '🌴', colors: ['#3f9b5a', '#0f3320'], catalog: true, scene: 'rain', file: 'Rainforest.ogg', desc: 'Pluie tiède sur la canopée.', credit: 'Rain Sound and Rainforest.mp3 by INNORECORDS -- https://freesound.org/s/457447/' },
@@ -275,6 +277,63 @@ const Engine = (() => {
         p.connect(h.out);
         h.tone(t, 988, 988, 0.08, 0.015, { type: 'square', dest: p });
         h.tone(t + 0.08, 1319, 1319, 0.3, 0.015, { type: 'square', dest: p });
+      });
+    },
+
+    // Tribunes : rumeur de la foule, et des voitures qui passent au loin d'un côté à l'autre
+    // (le son monte puis redescend, effet Doppler), parfois avec un rétrogradage.
+    circuit(h) {
+      const crowd = h.gain(0.32);
+      h.chain(h.noise('pink'), h.filter('bandpass', 700, 0.5), crowd, h.out);
+      h.lfo(0.07, 0.08, crowd.gain);
+      h.chain(h.noise('brown'), h.filter('lowpass', 200), h.gain(0.35), h.out);
+      h.every(2500, 7000, t => {
+        const { ctx: c } = h;
+        const dur = h.rand(2.2, 3.4);
+        const f = h.rand(95, 150);
+        const dir = h.rand(0, 1) < 0.5 ? -1 : 1;
+        const p = c.createStereoPanner();
+        p.pan.setValueAtTime(-0.9 * dir, t);
+        p.pan.linearRampToValueAtTime(0.9 * dir, t + dur);
+        const lp = h.filter('lowpass', 900);
+        lp.frequency.setValueAtTime(500, t);
+        lp.frequency.linearRampToValueAtTime(1800, t + dur * 0.5);
+        lp.frequency.linearRampToValueAtTime(400, t + dur);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.09, t + dur * 0.5);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        lp.connect(g).connect(p).connect(h.out);
+        const downshift = h.rand(0, 1) < 0.3;
+        for (const [type, mul] of [['sawtooth', 1], ['square', 0.5], ['sawtooth', 2.02]]) {
+          const o = c.createOscillator();
+          o.type = type;
+          o.frequency.setValueAtTime(f * mul * 1.22, t);
+          if (downshift) o.frequency.setValueAtTime(f * mul * 1.05, t + dur * 0.35);
+          o.frequency.exponentialRampToValueAtTime(f * mul * 0.8, t + dur);
+          o.connect(lp);
+          o.start(t);
+          o.stop(t + dur + 0.05);
+        }
+      });
+    },
+
+    // Atelier : moteur qui tourne au ralenti, cliquetis d'outils et clé à chocs de temps en temps.
+    garage(h) {
+      const idle = h.gain(0.11);
+      h.chain(h.osc('sawtooth', 36), h.filter('lowpass', 260), idle, h.out);
+      h.chain(h.osc('square', 18), h.filter('lowpass', 160), h.gain(0.5), idle);
+      h.lfo(11, 0.05, idle.gain);
+      h.chain(h.noise('brown'), h.filter('lowpass', 300), h.gain(0.25), h.out);
+      h.every(1800, 6000, t => {
+        const p = h.pan(h.rand(-0.7, 0.7));
+        p.connect(h.out);
+        for (let i = 0; i < Math.floor(h.rand(1, 4)); i++) h.tone(t + i * h.rand(0.08, 0.2), h.rand(2200, 4200), h.rand(1800, 3800), 0.12, 0.012, { type: 'triangle', dest: p });
+      });
+      h.every(9000, 22000, t => {
+        const p = h.pan(h.rand(-0.5, 0.5));
+        p.connect(h.out);
+        for (let i = 0; i < 6; i++) h.burst(t + i * 0.07, 0.05, { type: 'white', freq: 1400, q: 2, peak: 0.05, dest: p });
       });
     },
 

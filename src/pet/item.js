@@ -45,10 +45,11 @@ const FOOD = {
   ],
 };
 
-let state = { bites: 0, open: 0 };
+let state = { bites: 0, open: 0, door: 0 };
 const isFood = kind in FOOD;
-cv.width = isFood ? 32 : 56;
-cv.height = isFood ? 32 : 24;
+const isGarage = kind === 'garage';
+cv.width = isFood ? 32 : isGarage ? 132 : 56;
+cv.height = isFood ? 32 : isGarage ? 72 : 24;
 
 function drawFood(t) {
   const grid = FOOD[kind];
@@ -96,9 +97,34 @@ function drawHole() {
   }
 }
 
+// Garage du mode Course (2 px par pixel) : murs en briques, enseigne, rideau métallique qui se lève.
+function drawGarage() {
+  const s = 2;
+  const px = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x * s, y * s, w * s, h * s); };
+  px(2, 8, 62, 27, '#2a2238');
+  px(3, 9, 60, 26, '#b8bec8');
+  for (let y = 10; y < 35; y += 3) for (let x = 3 + (y % 2) * 3; x < 63; x += 6) px(x, y, 5, 1, '#a3aab6');
+  px(0, 4, 66, 5, '#2a2238');
+  px(1, 5, 64, 3, '#e53935');
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 9px "Segoe UI", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('GARAGE', 66, 13);
+  // Ouverture : intérieur sombre, rideau à lamelles qui remonte quand la porte s'ouvre.
+  const dx = 10, dw = 46, dy = 13, dh = 22;
+  px(dx - 1, dy - 1, dw + 2, dh + 1, '#2a2238');
+  px(dx, dy, dw, dh, '#15121c');
+  px(dx, dy + dh - 2, dw, 2, '#2b2833');
+  const shut = Math.round(dh * (1 - state.door));
+  for (let y = 0; y < shut; y++) px(dx, dy + y, dw, 1, y % 2 ? '#8d95a3' : '#a8b0bd');
+  px(dx, dy + shut - 1, dw, 1, '#5f6873');
+  px(dx + dw / 2 - 2, dy + shut - 2, 4, 1, '#2a2238');
+}
+
 function frame(t) {
   ctx.clearRect(0, 0, cv.width, cv.height);
-  if (isFood) drawFood(t); else drawHole();
+  if (isFood) drawFood(t); else if (isGarage) drawGarage(); else drawHole();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

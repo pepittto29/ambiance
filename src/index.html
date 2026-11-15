@@ -16,6 +16,7 @@
     <nav id="nav">
       <button class="nav-item active" data-page="modes"><span class="ico">&#xE945;</span><span class="lbl">Modes</span></button>
       <button class="nav-item" data-page="assistant"><span class="ico">&#xE8BD;</span><span class="lbl">Compagnon</span></button>
+      <button class="nav-item" data-page="garage"><span class="ico">&#xE804;</span><span class="lbl">Garage</span></button>
       <button class="nav-item" data-page="games"><span class="ico">&#xE7FC;</span><span class="lbl">Jeux</span></button>
       <button class="nav-item" data-page="sounds"><span class="ico">&#xEC4F;</span><span class="lbl">Sons</span></button>
       <button class="nav-item" data-page="music"><span class="ico">&#xE8D6;</span><span class="lbl">Musique</span></button>
@@ -70,6 +71,20 @@
           </div>
           <p class="s-sub">Sans IA, votre compagnon comprend les commandes simples et répond avec des phrases toutes faites. Avec l'IA locale, il comprend les phrases libres et discute vraiment. Le modèle (Qwen2.5, licence Apache 2.0) et le moteur llama.cpp sont téléchargés une seule fois puis vérifiés ; ensuite, rien ne quitte votre PC.</p>
         </div>
+      </section>
+
+      <section id="page-garage" class="page">
+        <header class="page-head">
+          <div>
+            <h1>Garage</h1>
+            <p class="sub">En mode Course, votre compagnon devient la voiture choisie : elle dérape, laisse des traces de pneus et fait de temps en temps la course autour de l'écran.</p>
+          </div>
+          <div class="head-actions">
+            <button id="gr-place" class="btn"><span class="ico">&#xE707;</span> Placer le garage</button>
+            <button id="gr-race" class="btn accent"><span class="ico">&#xE7C1;</span> Lancer une course</button>
+          </div>
+        </header>
+        <div id="gr-cars" class="gr-cars"></div>
       </section>
 
       <section id="page-games" class="page">
@@ -474,6 +489,7 @@
             <option value="normal">Normal</option>
             <option value="joueur">Joueur : saute et danse beaucoup</option>
           </select>
+          <label class="me-check"><input type="checkbox" id="me-car"> Voiture de course à la place de l'animal</label>
         </div>
         <div class="me-section">
           <h4>Écran</h4>
@@ -560,5 +576,7 @@
   <script src="assistant.js"></script>
   <script src="pet/games-data.js"></script>
   <script src="games-ui.js"></script>
+  <script src="pet/cars.js"></script>
+  <script src="garage-ui.js"></script>
 </body>
 </html>

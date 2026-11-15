@@ -30,6 +30,7 @@
     }
     if (m.focusTimer) out.push('⏱️ Focus');
     out.push({ calme: '🐾 calme', normal: '🐾 normal', joueur: '🐾 joueur' }[m.pet.energy]);
+    if (m.pet.car) out.push('🏎️ voiture');
     if (m.screen.grayscale) out.push('⚫ noir et blanc');
     if (m.screen.warmth > 0) out.push('🌅 écran chaud');
     if (m.screen.dim > 0) out.push('🔅 atténué');
@@ -153,6 +154,7 @@
     soundSummary();
     $('#me-focus').checked = !!editing.focusTimer;
     $('#me-energy').value = editing.pet.energy;
+    $('#me-car').checked = !!editing.pet.car;
     $('#me-gray').checked = !!editing.screen.grayscale;
     $('#me-warm').value = Math.round((editing.screen.warmth || 0) * 100);
     $('#me-dim').value = Math.round((editing.screen.dim || 0) * 100);
@@ -195,6 +197,7 @@
     else if (soundChoice === 'current') m.sound.mix = { ...App.state.active };
     m.focusTimer = $('#me-focus').checked;
     m.pet.energy = $('#me-energy').value;
+    m.pet.car = $('#me-car').checked;
     m.screen = { grayscale: $('#me-gray').checked, warmth: $('#me-warm').value / 100, dim: $('#me-dim').value / 100 };
     m.win.theme = $('#me-theme').value || null;
     m.win.power = $('#me-power').value || null;

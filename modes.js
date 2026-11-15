@@ -4,6 +4,7 @@
 //   sound.mix      : sons à jouer { id: volume } ; null = ne pas toucher à la lecture en cours
 //   focusTimer     : lance une session Focus (Pomodoro)
 //   pet.energy     : 'calme' | 'normal' | 'joueur'
+//   pet.car        : le compagnon devient la voiture choisie au garage (mode Course)
 //   screen         : filtres de couleur { grayscale, warmth 0..1, dim 0..1 }
 //   win            : réglages Windows (null = laisser tel quel) ; wallpaper peut valoir « retro:coucher »
 //                    (fond pixel dessiné par l'application), cursors « retro », accent '#rrggbb'
@@ -58,6 +59,15 @@ const DEFAULT_MODES = [
     screen: { grayscale: false, warmth: 0, dim: 0 },
     win: { ...BLANK_WIN, theme: 'dark', wallpaper: 'retro:coucher', cursors: 'retro', accent: '#ff4fa3' },
     frame: 'pixel',
+    minimize: [], launch: [],
+  },
+  {
+    id: 'course', builtin: true, name: 'Course', emoji: '🏁', colors: ['#e53935', '#2b0b0b'],
+    desc: 'Le compagnon devient une voiture de sport : dérapages, traces de pneus et courses autour de l\'écran.',
+    sound: { mix: { circuit: 0.55, garage: 0.2 } }, focusTimer: false,
+    pet: { energy: 'joueur', car: true },
+    screen: { grayscale: false, warmth: 0, dim: 0 },
+    win: { ...BLANK_WIN, theme: 'dark' },
     minimize: [], launch: [],
   },
 ];

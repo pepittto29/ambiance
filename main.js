@@ -13,6 +13,7 @@ const spotify = require('./spotify');
 const retro = require('./retro');
 const ai = require('./ai');
 const games = require('./games');
+const { CARS: RACE_CARS } = require('./src/pet/cars');
 
 // Les erreurs du processus principal sont consignées dans %APPDATA%\Ambiance\main.log.
 function logError(err) {
@@ -41,9 +42,12 @@ const builtinDir = path.join(__dirname, 'src', 'sounds');
 
 // Préférences lues par le processus principal (nécessaires avant l'ouverture de la fenêtre).
 const configPath = () => path.join(app.getPath('userData'), 'config.json');
-let config = { pet: true, petSound: true, closeToTray: true, petScreen: true, petCheese: true, petHoles: true, petAnimal: 'souris', petName: 'Pixel', burrow: null, modes: [], activeMode: null,
+let config = { pet: true, petSound: true, closeToTray: true, petScreen: true, petCheese: true, petHoles: true, petAnimal: 'souris', petName: 'Pixel', car: 'ferrari-250-gto', burrow: null, modes: [], activeMode: null,
   clock: { show: false, seconds: false, date: true, x: null, y: null }, petReminders: true };
-const petOptions = () => ({ screenLines: config.petScreen, cheese: config.petCheese, holes: config.petHoles, animal: config.petAnimal, burrow: config.burrow, name: config.petName });
+// La voiture ne remplace l'animal que dans un mode qui le demande (le mode Course).
+const activeModeObj = () => modes.list(config.modes).find(m => m.id === config.activeMode) || null;
+const petCar = (mode = activeModeObj()) => (mode && mode.pet.car ? config.car : null);
+const petOptions = () => ({ screenLines: config.petScreen, cheese: config.petCheese, holes: config.petHoles, animal: config.petAnimal, burrow: config.burrow, name: config.petName, car: petCar() });
 function loadConfig() {
   try { Object.assign(config, JSON.parse(fs.readFileSync(configPath(), 'utf8'))); } catch { /* première exécution */ }
 }
@@ -117,7 +121,7 @@ function activateMode(id, { notify = false } = {}) {
   const isNormal = mode.id === 'normal';
   // D'abord ce qui se voit et s'entend (page, son, compagnon), puis les réglages de Windows.
   config.activeMode = isNormal ? null : mode.id;
-  pet.setOptions({ energy: mode.pet.energy });
+  pet.setOptions({ energy: mode.pet.energy, car: petCar(mode) });
   if (win) win.webContents.send('mode-changed', mode);
   updateTray();
   setImmediate(() => {
@@ -243,6 +247,12 @@ ipcMain.handle('games-place-garden', async () => {
   return games.state();
 });
 ipcMain.handle('games-remove-garden', () => { games.setGarden(null); return games.state(); });
+// Lance une course autour de l'écran (en passant au mode Course si besoin).
+ipcMain.handle('race-start', () => {
+  if (!config.pet) setPet(true);
+  if (!petCar()) activateMode('course');
+  return pet.startRace();
+});
 ipcMain.handle('pet-say', (_e, text) => { if (config.pet) pet.say(text); });
 ipcMain.handle('retro-previews', () => { try { return retro.previews(); } catch (e) { logError(e); return []; } });
 ipcMain.handle('open-windhawk', () => shell.openExternal('https://windhawk.net/'));
@@ -338,6 +348,7 @@ ipcMain.handle('set-config', (_e, patch) => {
   if ('petSound' in patch) { config.petSound = !!patch.petSound; pet.setSound(config.petSound); }
   for (const k of ['petScreen', 'petCheese', 'petHoles']) if (k in patch) config[k] = !!patch[k];
   if (typeof patch.petAnimal === 'string') config.petAnimal = patch.petAnimal;
+  if (typeof patch.car === 'string' && RACE_CARS.some(c => c.id === patch.car)) config.car = patch.car;
   if (typeof patch.petName === 'string') config.petName = patch.petName.trim().slice(0, 20) || 'Pixel';
   if ('burrow' in patch && patch.burrow === null) config.burrow = null;
   pet.setOptions(petOptions());
@@ -351,7 +362,7 @@ ipcMain.handle('set-config', (_e, patch) => {
 
 ipcMain.handle('pick-burrow', async () => {
   if (!config.pet) setPet(true);
-  const point = await pet.pickBurrow();
+  const point = await pet.pickBurrow(petCar() ? 'le garage' : 'le terrier');
   if (point) {
     config.burrow = point;
     saveConfig();

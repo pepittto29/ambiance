@@ -9,6 +9,7 @@ const world = require('./pet-world');
 const memory = require('./pet-memory');
 const tasks = require('./tasks');
 const games = require('./games');
+const race = require('./pet-race');
 
 let hook = null;
 try { hook = require('uiohook-napi').uIOhook; } catch { /* clics globaux indisponibles */ }
@@ -25,13 +26,16 @@ const FOOD = { souris: 'cheese', hamster: 'cheese', lapin: 'carrot', chat: 'fish
 let petWin = null;
 let loop = null;
 let soundOn = true;
-let opts = { screenLines: true, cheese: true, holes: true, animal: 'souris', burrow: null, energy: 'normal', reminders: true };
+let opts = { screenLines: true, cheese: true, holes: true, animal: 'souris', burrow: null, energy: 'normal', reminders: true, car: null };
 const ANIMAL_NAME = { souris: 'ta souris', hamster: 'ton hamster', lapin: 'ton lapin', chat: 'ton chat' };
 const REMIND_EVERY = 35 * 60000;
 let handlers = { openTasks: () => {} };
 
 // Le mode actif règle l'énergie : « calme » se comporte comme quand l'utilisateur est concentré.
 const calm = () => opts.energy === 'calme' || memory.busy();
+// Mode Course : le compagnon est une voiture, bien plus rapide, qui dérape et laisse des traces.
+const isCar = () => !!opts.car;
+const speedOf = v => (isCar() ? v * 2.6 : v);
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -65,6 +69,29 @@ let holeSeq = 0;
 let burrow = null;
 let garden = null; // jardinière : { x, y, win }
 let lastMinute = now();
+let nextRace = now() + 4 * 60000;
+
+// Le calque des traces reste sous la voiture.
+race.onShown(() => { if (petWin && !petWin.isDestroyed()) petWin.moveTop(); });
+
+function startRace() {
+  if (!petWin || pet.race || !isCar()) return false;
+  const d = world.displayAt(pet.x, pet.y);
+  closeInfo();
+  pet.goal = null; pet.held = false; pet.hidden = false; pet.drift = null;
+  pet.race = true;
+  race.start(d, { onLap: lap => { pet.sound++; emote(lap === 'fin' ? '★' : '!', 1400, 'happy'); } });
+  return true;
+}
+
+function endRace() {
+  pet.race = false;
+  pet.raceRot = 0;
+  pet.slip = 0;
+  pet.facing = 1;
+  startFall(0, 0, 'fall');
+  setAct('dance', 2000);
+}
 
 // ---------- Utilitaires ----------
 function area(x = pet.x, y = pet.y) { return world.displayAt(x, y).workArea; }
@@ -83,10 +110,36 @@ function setAct(act, ms = 0) {
 
 // La vitesse varie un peu d'un trajet à l'autre et monte progressivement (voir updateFloor).
 function walkTo(x, run = false) {
-  if (sign(x - pet.x) !== pet.facing && Math.abs(x - pet.x) > 4 && pet.speed > 20) pet.speed = 0;
+  if (isCar()) run = run || Math.random() < 0.5;
   pet.tx = x;
-  pet.maxSpeed = (run ? RUN : WALK) * rand(0.85, 1.15);
+  pet.maxSpeed = speedOf(run ? RUN : WALK) * rand(0.85, 1.15);
+  if (sign(x - pet.x) !== pet.facing && Math.abs(x - pet.x) > 4 && pet.speed > 20) {
+    // La voiture lancée fait demi-tour en dérapant ; l'animal s'arrête net.
+    if (isCar() && pet.mode === 'floor' && pet.speed > 120) { startDrift(sign(x - pet.x), 'walk'); return; }
+    pet.speed = 0;
+  }
   setAct(run ? 'run' : 'walk');
+}
+
+// Dérapage : la voiture glisse sur sa lancée en freinant, fume et laisse des traces de pneus.
+function startDrift(dir, then) {
+  pet.drift = { v: pet.speed * pet.facing, dir, then };
+  setAct('drift', 650);
+}
+
+function updateDrift(dt, p) {
+  const d = pet.drift;
+  pet.x += d.v * dt;
+  d.v *= Math.exp(-4.5 * dt);
+  if (!world.solidAt(p, pet.x)) { pet.drift = null; startFall(d.v, -60, 'jump'); return; }
+  race.mark(pet.x - pet.facing * 22, pet.y, 0);
+  race.mark(pet.x + pet.facing * 18, pet.y, 0);
+  if (now() < pet.until) return;
+  pet.drift = null;
+  pet.speed = 0;
+  pet.facing = d.dir;
+  if (d.then === 'arrive') arrive();
+  else setAct(pet.maxSpeed > speedOf(WALK) * 1.3 ? 'run' : 'walk');
 }
 
 function startFall(vx = 0, vy = 0, act = 'fall') {
@@ -127,7 +180,7 @@ function ownWindows() {
 }
 
 function ownHandles() {
-  return new Set(ownWindows().map(w => w.getNativeWindowHandle().readBigUInt64LE(0)));
+  return new Set([...ownWindows(), ...race.handles()].map(w => w.getNativeWindowHandle().readBigUInt64LE(0)));
 }
 
 function itemWindow(kind, w, h) {
@@ -361,7 +414,7 @@ function idleActivity() {
   } else if (r < 0.83) {
     setAct('bored', 2500);
     const hungry = t - pet.lastFood > FOOD_EVERY;
-    emote(hungry ? FOOD[opts.animal] : '…', 2500, Math.random() < 0.3 ? 'tear' : null);
+    emote(hungry && !isCar() ? FOOD[opts.animal] : '…', 2500, Math.random() < 0.3 ? 'tear' : null);
     return;
   }
   setAct('idle', rand(1000, 3500));
@@ -453,8 +506,11 @@ function updateFloor(dt) {
     pet.until = now() + 1000;
     return;
   }
+  if (pet.act === 'drift') { updateDrift(dt, p); return; }
   if (pet.act === 'walk' || pet.act === 'run') {
     const dx = pet.tx - pet.x;
+    // Arrivée trop rapide : la voiture s'arrête en dérapage.
+    if (isCar() && pet.speed > 260 && Math.abs(dx) < 70) { startDrift(pet.facing, 'arrive'); return; }
     // Accélère au départ, ralentit à l'arrivée.
     const target = Math.min(pet.maxSpeed, Math.abs(dx) * 3 + 15);
     pet.speed += (target - pet.speed) * Math.min(1, dt * 6);
@@ -482,7 +538,7 @@ function updateFloor(dt) {
   if (pet.act === 'crouch') { if (now() > pet.until) launch(); return; }
   if (pet.act === 'eat') { updateEating(); return; }
   if (pet.act === 'look' && pet.edgeChecked && now() > pet.until) {
-    setAct(pet.maxSpeed > WALK * 1.3 ? 'run' : 'walk');
+    setAct(pet.maxSpeed > speedOf(WALK) * 1.3 ? 'run' : 'walk');
     return;
   }
   if (now() > pet.until) {
@@ -514,7 +570,7 @@ function updateWall(dt) {
   const floorY = a.y + a.height;
   pet.facing = left ? pet.climbDir : -pet.climbDir;
   if (pet.act === 'climb') {
-    pet.y += pet.climbDir * CLIMB * dt;
+    pet.y += pet.climbDir * speedOf(CLIMB) * dt;
     if (pet.climbDir > 0 && pet.y + 37 >= floorY) {
       pet.mode = 'floor';
       pet.x = left ? a.x + 37 : a.x + a.width - 37;
@@ -586,8 +642,8 @@ function updateCeiling(dt) {
     return;
   }
   const dx = pet.tx - pet.x;
-  if (Math.abs(dx) <= WALK * dt) pet.tx = clamp(pet.x + rand(-400, 400), a.x + 40, a.x + a.width - 40);
-  else pet.x += sign(dx) * WALK * dt;
+  if (Math.abs(dx) <= speedOf(WALK) * dt) pet.tx = clamp(pet.x + rand(-400, 400), a.x + 40, a.x + a.width - 40);
+  else pet.x += sign(dx) * speedOf(WALK) * dt;
   pet.facing = -sign(dx);
 }
 
@@ -669,10 +725,12 @@ function floorSpot() {
   return { p, x: rand(p.x1 + 80, p.x2 - 80) };
 }
 
+const GARAGE_W = 132, GARAGE_H = 72;
+
 function makeHole(s, kind, extra = {}) {
   return {
     id: ++holeSeq, kind, x: s.x, y: s.p.y, support: s.p.id, supportX: s.p.x1,
-    born: now(), life: Infinity, open: 0, win: itemWindow(kind, 56, 24), ...extra,
+    born: now(), life: Infinity, open: 0, win: kind === 'garage' ? itemWindow(kind, GARAGE_W, GARAGE_H) : itemWindow(kind, 56, 24), ...extra,
   };
 }
 
@@ -686,6 +744,15 @@ function spawnHole(exit = false) {
 
 function placeHoleWindow(h) {
   if (!h.win || h.win.isDestroyed()) return;
+  if (h.kind === 'garage') {
+    h.win.setBounds({ x: Math.round(h.x - GARAGE_W / 2), y: Math.round(h.y - GARAGE_H + 2), width: GARAGE_W, height: GARAGE_H });
+    // La porte s'ouvre quand la voiture arrive, part ou dort dedans.
+    const near = (pet.goal && pet.goal.hole === h) || pet.hole === h || (Math.abs(pet.x - h.x) < 90 && Math.abs(pet.y - h.y) < 20);
+    h.door = clamp((h.door || 0) + (near ? 0.06 : -0.03), 0, 1);
+    const d = Math.round(h.door * 20) / 20;
+    if (d !== h.sent) { h.sent = d; h.win.webContents.send('pet-state', { open: 1, door: d }); }
+    return;
+  }
   h.win.setBounds({ x: Math.round(h.x - 28), y: Math.round(h.y - 12), width: 56, height: 24 });
   const o = Math.round(h.open * 20) / 20;
   if (o !== h.sent) { h.sent = o; h.win.webContents.send('pet-state', { open: o }); }
@@ -725,7 +792,7 @@ function updateBurrow(dt) {
   let s = world.surfaceBelow(b.x, b.y - 8);
   if (!s || s.y - b.y > 60) s = world.platforms().find(p => p.kind === 'floor' && b.x >= p.x1 && b.x <= p.x2) || s;
   if (!s) return;
-  if (!burrow) burrow = makeHole({ x: b.x, p: s }, 'burrow');
+  if (!burrow) burrow = makeHole({ x: b.x, p: s }, isCar() ? 'garage' : 'burrow');
   burrow.x = b.x;
   burrow.y = s.y;
   burrow.support = s.id;
@@ -928,7 +995,7 @@ function tick() {
   lastTick = t;
 
   if (t - lastWindows > 250) { world.refreshWindows(ownHandles()); lastWindows = t; }
-  if (opts.screenLines && t - world.lastScan > 4000) {
+  if (opts.screenLines && !race.active() && t - world.lastScan > 4000) {
     const inUse = new Set([pet.support, food?.support, burrow?.support, ...holes.map(h => h.support)].filter(Boolean));
     world.scan(ownWindows().map(w => w.getBounds()), inUse);
   }
@@ -942,8 +1009,8 @@ function tick() {
   }
   cursor.x = cur.x; cursor.y = cur.y;
 
-  if (opts.cheese && !food && t > nextFood) spawnFood();
-  if (opts.holes && t > nextHole) {
+  if (opts.cheese && !isCar() && !food && t > nextFood) spawnFood();
+  if (opts.holes && !isCar() && t > nextHole) {
     if (holes.filter(h => !h.exit).length < 1) spawnHole();
     nextHole = t + rand(4, 9) * 60000;
   }
@@ -957,7 +1024,17 @@ function tick() {
     if (t - pet.lastActive < 60000) games.minute();
   }
 
-  if (pet.hidden) {
+  race.update(dt);
+  if (isCar() && !race.active() && t > nextRace && pet.mode === 'floor' && !pet.held && !pet.hidden && !calm() && !bubbleOpen()) {
+    nextRace = t + rand(10, 20) * 60000;
+    startRace();
+  }
+  if (pet.race) {
+    // Course autour de l'écran : la piste pilote la voiture.
+    const r = race.car();
+    if (r) { pet.x = r.x; pet.y = r.y; pet.raceRot = r.rot; pet.speed = r.speed; pet.slip = r.slip; }
+    else endRace();
+  } else if (pet.hidden) {
     if (t > pet.until) exitHole();
   } else if (pet.act === 'hole-in') {
     if (t > pet.until) { pet.hidden = true; setAct('hidden', pet.napping ? rand(30000, 90000) : rand(4000, 15000)); }
@@ -985,6 +1062,7 @@ function tick() {
 }
 
 const POSE = {
+  drift: 'drift',
   walk: 'walk', run: 'run', climb: 'walk', jump: 'jump', fall: 'fall', thrown: 'fall', tumble: 'fall',
   held: 'held', sleep: 'sleep', eat: 'eat', sit: 'sit', sniff: 'sniff', dance: 'dance', love: 'love',
   dizzy: 'dizzy', shake: 'shake', look: 'idle', bored: 'sit', hang: 'idle', crouch: 'crouch', land: 'land',
@@ -993,7 +1071,7 @@ const FACE = { sleep: 'closed', love: 'happy', dizzy: 'dizzy', dance: 'happy', s
 
 function render(t) {
   if (!petWin || petWin.isDestroyed()) return;
-  const [ax, ay] = ANCHOR[pet.mode];
+  const [ax, ay] = pet.race ? [44, 44] : ANCHOR[pet.mode];
   petWin.setBounds({ x: Math.round(pet.x - ax), y: Math.round(pet.y - ay), width: SIZE, height: SIZE });
   let sink = 0;
   if (pet.hidden) sink = 1;
@@ -1001,15 +1079,19 @@ function render(t) {
   else if (pet.act === 'hole-out') sink = clamp(1 - (t - pet.actStart) / 900, 0, 1);
   const state = {
     animal: opts.animal,
-    pose: pet.act === 'hole-in' || pet.act === 'hole-out' ? 'walk' : POSE[pet.act] || 'idle',
+    pose: pet.race ? 'race' : pet.act === 'hole-in' || pet.act === 'hole-out' ? 'walk' : POSE[pet.act] || 'idle',
     face: pet.face || FACE[pet.act] || 'normal',
     emo: pet.hidden ? null : pet.emo,
     facing: pet.facing,
-    rot: ROTATION[pet.mode] + (pet.mode === 'air' ? Math.round(pet.spin / 15) * 15 : 0),
+    rot: pet.race ? Math.round(pet.raceRot) : ROTATION[pet.mode] + (pet.mode === 'air' ? Math.round(pet.spin / 15) * 15 : 0),
     flipBubble: pet.mode === 'ceil',
     sink: Math.round(sink * 20) / 20,
     sound: soundOn ? pet.sound : 0,
     hat: games.wearing(),
+    car: opts.car,
+    spd: isCar() ? Math.round(pet.speed / 20) * 20 * (pet.act === 'drift' ? 0 : 1) : 0,
+    slip: pet.race ? Math.round(pet.slip || 0) : pet.act === 'drift' ? 1 : 0,
+    mute: !soundOn,
   };
   const msg = JSON.stringify(state);
   if (msg !== lastSent) {
@@ -1185,6 +1267,7 @@ function start() {
   petWin.on('closed', () => { petWin = null; });
 
   world.setUseScreen(opts.screenLines);
+  race.setEnabled(!!opts.car);
   lastTick = now();
   loop = setInterval(tick, 33);
   if (hook) {
@@ -1213,6 +1296,9 @@ function stop() {
   garden = null;
   games.flush();
   closeInfo();
+  race.stop();
+  race.setEnabled(false);
+  pet.race = false;
   closeWin(petWin);
   petWin = null;
 }
@@ -1232,12 +1318,21 @@ module.exports = {
   setSound(on) { soundOn = !!on; },
   setOptions(o) {
     const animalChanged = o.animal && o.animal !== opts.animal;
+    const carToggled = 'car' in o && !!o.car !== !!opts.car;
     opts = { ...opts, ...o };
+    if (carToggled) {
+      if (burrow) { closeWin(burrow.win); burrow = null; }
+      if (!opts.car && pet.race) { race.stop(); endRace(); }
+      race.setEnabled(!!opts.car);
+      if (opts.car) { if (food) { closeWin(food.win); food = null; } holes.forEach(h => closeWin(h.win)); holes = []; }
+      if (petWin) emote(opts.car ? '!' : '♥', 1500, 'happy');
+    }
     world.setUseScreen(opts.screenLines);
     if ((!opts.cheese || animalChanged) && food) { closeWin(food.win); food = null; }
     if (!opts.holes) { holes.forEach(h => closeWin(h.win)); holes = []; }
     if (animalChanged && petWin) emote('♥', 1500, 'happy');
   },
+  startRace,
   giveFood() { if (petWin) { if (food) { closeWin(food.win); food = null; } spawnFood(); } },
   // Pour les tests : état interne et surfaces connues.
   debug: () => ({ info: { open: bubbleOpen(), hover: infoHover, left: Math.round(infoUntil - now()) }, pet: { x: pet.x, y: pet.y, mode: pet.mode, act: pet.act, support: pet.support, goal: pet.goal && pet.goal.type }, windows: world.windowCount, lines: world.lineCount, food: food && food.kind, holes: holes.length, burrow: !!burrow }),

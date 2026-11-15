@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('ambiance', {
   pickImage: () => ipcRenderer.invoke('pick-image'),
   retroPreviews: () => ipcRenderer.invoke('retro-previews'),
   petSay: (text) => ipcRenderer.invoke('pet-say', text),
+  raceStart: () => ipcRenderer.invoke('race-start'),
   games: {
     state: () => ipcRenderer.invoke('games-state'),
     wear: (id) => ipcRenderer.invoke('games-wear', id),

@@ -184,8 +184,109 @@ function drawBubble(sym, t) {
   drawGrid(g, bx + 2 * s, by + 2 * s, s, false, EXTRA);
 }
 
+// ---------- Mode Course : la voiture remplace l'animal ----------
+const CAR_S = 2;
+let wheelSpin = 0, lastFrame = performance.now();
+let smoke = [];
+
+function carPose(t) {
+  const alt = ms => Math.floor(t / ms) % 2 === 0;
+  switch (st.pose) {
+    case 'run': return { dy: alt(90) ? -1 : 0 };
+    case 'drift': return { dx: alt(50) ? -1 : 1 };
+    case 'dance': case 'love': return { dy: alt(220) ? -4 : 0 };
+    case 'held': return { dx: Math.sin(t / 150) * 3 };
+    case 'dizzy': case 'shake': return { dx: alt(60) ? -1 : 1 };
+    case 'land': case 'crouch': return { dy: 1 };
+    default: return {};
+  }
+}
+
+function renderCar(t) {
+  const dt = Math.min(0.05, (t - lastFrame) / 1000);
+  lastFrame = t;
+  wheelSpin += Math.abs(st.spd || 0) * dt / (3 * CAR_S);
+  const p = carPose(t);
+  const race = st.pose === 'race';
+  const flip = !race && st.facing < 0;
+  const left = 4 + (p.dx || 0);
+  const top = race ? 44 - 9 * CAR_S : FEET_Y - 16 * CAR_S + (p.dy || 0);
+  // Fumée des pneus quand la voiture dérape.
+  if ((st.pose === 'drift' || (race && st.slip > 6)) && Math.random() < 0.7) {
+    const rx = flip ? left + 33 * CAR_S : left + 7 * CAR_S;
+    smoke.push({ x: rx + (Math.random() - 0.5) * 6, y: top + 15 * CAR_S, vx: (flip ? 1 : -1) * (20 + Math.random() * 30), r: 3, a: 0.55 });
+  }
+  smoke = smoke.filter(s => (s.a -= dt * 0.9) > 0);
+  ctx.save();
+  ctx.translate(44, 44);
+  ctx.rotate((st.rot || 0) * Math.PI / 180);
+  ctx.translate(-44, -44);
+  for (const s of smoke) {
+    s.x += s.vx * dt; s.y -= 18 * dt; s.r += 10 * dt;
+    ctx.fillStyle = `rgba(225,228,234,${s.a})`;
+    ctx.fillRect(Math.round(s.x - s.r), Math.round(s.y - s.r), Math.round(s.r * 2), Math.round(s.r * 2));
+  }
+  ctx.globalAlpha = 1 - (st.sink || 0);
+  RACE_CARS.draw(ctx, st.car, left, top, CAR_S, { flip, spin: wheelSpin });
+  ctx.restore();
+  if (st.emo) drawBubble(st.emo, t);
+  carSounds();
+}
+
+// Sons de la voiture : moteur qui monte avec la vitesse, crissement des pneus, klaxon au clic.
+let engine = null, screech = null;
+function carSounds() {
+  const moving = ['run', 'walk', 'race', 'drift'].includes(st.pose) && !st.mute;
+  audio = audio || new AudioContext();
+  const now = audio.currentTime;
+  if (moving && !engine) {
+    const o = audio.createOscillator(), o2 = audio.createOscillator(), f = audio.createBiquadFilter(), g = audio.createGain();
+    o.type = 'sawtooth'; o2.type = 'square'; f.type = 'lowpass'; f.frequency.value = 700; g.gain.value = 0;
+    o.connect(f); o2.connect(f); f.connect(g).connect(audio.destination);
+    o.start(); o2.start();
+    engine = { o, o2, g };
+  }
+  if (engine) {
+    const f = 42 + Math.abs(st.spd || 0) * 0.14;
+    engine.o.frequency.setTargetAtTime(f, now, 0.08);
+    engine.o2.frequency.setTargetAtTime(f * 0.5, now, 0.08);
+    engine.g.gain.setTargetAtTime(moving ? (st.pose === 'race' ? 0.035 : 0.02) : 0, now, 0.15);
+  }
+  const skid = (st.pose === 'drift' || (st.pose === 'race' && st.slip > 6)) && !st.mute;
+  if (skid && !screech) {
+    const len = audio.sampleRate;
+    const buf = audio.createBuffer(1, len, audio.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = audio.createBufferSource(); src.buffer = buf; src.loop = true;
+    const f = audio.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2300; f.Q.value = 6;
+    const g = audio.createGain(); g.gain.value = 0;
+    src.connect(f).connect(g).connect(audio.destination); src.start();
+    screech = { src, f, g };
+  }
+  if (screech) {
+    screech.g.gain.setTargetAtTime(skid ? 0.05 : 0, now, 0.05);
+    screech.f.frequency.setTargetAtTime(2100 + Math.random() * 500, now, 0.03);
+  }
+}
+
+function honk() {
+  audio = audio || new AudioContext();
+  const t = audio.currentTime;
+  for (const f of [392, 494]) {
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = 'square'; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.035, t + 0.01);
+    g.gain.setValueAtTime(0.035, t + 0.22); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    o.connect(g).connect(audio.destination); o.start(t); o.stop(t + 0.32);
+  }
+}
+
 function render(t) {
   ctx.clearRect(0, 0, cv.width, cv.height);
+  if (st.car) { renderCar(t); requestAnimationFrame(render); return; }
+  if (engine) { engine.g.gain.value = 0; }
+  if (screech) { screech.g.gain.value = 0; }
   const p = pose(t);
   const rows = p.rows.map(r => r.slice());
   const face = st.face === 'normal' && (t % 3400) < 130 ? 'closed' : (p.face && st.face === 'normal' ? p.face : st.face);
@@ -232,7 +333,7 @@ function squeak() {
 
 window.pet.onState(s => {
   if (s.pose !== st.pose) poseSince = performance.now();
-  if (lastSound !== null && s.sound > lastSound) squeak();
+  if (lastSound !== null && s.sound > lastSound) { if (s.car) honk(); else squeak(); }
   lastSound = s.sound;
   if (s.animal) setAnimal(s.animal);
   st = s;
