@@ -1172,6 +1172,10 @@ function singleClick() {
   }
 }
 
+ipcMain.handle('pet-sound', (_e, name) => {
+  if (!/^[a-z0-9-]+$/.test(String(name))) return null;
+  try { return require('fs').readFileSync(path.join(__dirname, 'src', 'sounds', 'cars', name + '.ogg')); } catch { return null; }
+});
 ipcMain.on('pet-hover', (_e, on) => { pet.hover = !!on; });
 ipcMain.on('pet-ignore', (_e, ignore) => {
   if (petWin && !petWin.isDestroyed()) petWin.setIgnoreMouseEvents(!!ignore, { forward: true });

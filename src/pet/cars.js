@@ -74,7 +74,19 @@
     ['porsche-carrera-gt', 'Porsche Carrera GT', 2003, '#9fa6ad', 'mid', { roof: 4, a: 0.4, b: 0.56, wing: 'duck' }],
   ];
 
-  const CARS = LIST.map(([id, name, year, color, type, o]) => ({ id, name, year, color, type, ...TYPES[type], ...o }));
+  // Son du moteur : famille d'enregistrements et hauteur (1 = telle quelle, plus haut = moteur plus petit).
+  const ENGINES = {
+    flat6: ['porsche-911', 'porsche-cayman', 'porsche-356', 'porsche-550', 'porsche-959', 'porsche-carrera-gt'],
+    v12: ['ferrari-250-gto', 'ferrari-dino', 'ferrari-f40', 'ferrari-daytona', 'lamborghini-miura', 'lamborghini-countach', 'aston-db5', 'mclaren-f1', 'jaguar-etype', 'jaguar-xkss', 'jaguar-xk120', 'alfa-8c-2300', 'alfa-8c-2900', 'toyota-2000gt', 'mercedes-300sl', 'bmw-m1'],
+    v8: ['ac-cobra', 'corvette-stingray', 'dodge-viper', 'plymouth-superbird', 'ford-gt40', 'bmw-507', 'lancia-stratos', 'skyline-gtr'],
+  };
+  const SMALL = ['healey-sprite', 'lotus-seven', 'lotus-elan', 'lotus-elise', 'mgb', 'mazda-mx5', 'fiat-x19', 'alpine-berlinette', 'frazer-nash', 'bugatti-35', 'triumph-tr6', 'alfa-spider', 'healey-100'];
+  const engineOf = id => {
+    const family = Object.keys(ENGINES).find(f => ENGINES[f].includes(id)) || 'sport';
+    return { family, pitch: SMALL.includes(id) ? 1.18 : family === 'v12' && id.startsWith('jaguar') ? 0.92 : 1 };
+  };
+
+  const CARS = LIST.map(([id, name, year, color, type, o]) => ({ id, name, year, color, type, engine: engineOf(id), ...TYPES[type], ...o }));
 
   // Teintes dérivées de la couleur de carrosserie.
   function shade(hex, k) {
@@ -220,7 +232,7 @@
     }
   }
 
-  const DATA = { CARS: CARS.map(({ id, name, year, color }) => ({ id, name, year, color })), W, H, draw, sprite };
+  const DATA = { CARS: CARS.map(({ id, name, year, color, engine }) => ({ id, name, year, color, engine })), W, H, draw, sprite };
   if (typeof module !== 'undefined') module.exports = DATA;
   else window.RACE_CARS = DATA;
 })();

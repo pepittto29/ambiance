@@ -233,60 +233,91 @@ function renderCar(t) {
   carSounds();
 }
 
-// Sons de la voiture : moteur qui monte avec la vitesse, crissement des pneus, klaxon au clic.
-let engine = null, screech = null;
+// Sons de la voiture : enregistrements CC0 (src/sounds/cars). Le ralenti tourne en boucle et monte
+// dans les tours avec la vitesse, une montée en régime part au démarrage, un passage à chaque tour de
+// course, le crissement pendant les dérapages et le klaxon au clic.
+const FAMILY = {
+  flat6: { idle: 'flat6-idle', rev: 'flat6-rev', pass: 'flat6-pass' },
+  v12: { idle: 'v12-idle', rev: 'v12-rev', pass: 'v12-pass' },
+  v8: { idle: 'v8-idle', rev: 'v8-rev', pass: 'v8-pass' },
+  sport: { idle: 'flat6-idle', rev: 'sport-rev', pass: 'v12-pass', pitch: 1.25 },
+};
+const buffers = {};
+function sample(name) {
+  if (!buffers[name]) {
+    buffers[name] = window.pet.sound(name).then(u8 => (u8 ? audio.decodeAudioData(u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength)) : null)).catch(() => null);
+  }
+  return buffers[name];
+}
+const MOVING = ['run', 'walk', 'race', 'drift'];
+let engine = null, skid = null, lastPose = 'idle', lastSpd = 0, movedAt = 0;
+
+function carInfo() {
+  const c = RACE_CARS.CARS.find(x => x.id === st.car) || RACE_CARS.CARS[0];
+  const f = FAMILY[c.engine.family] || FAMILY.sport;
+  return { f, pitch: c.engine.pitch * (f.pitch || 1) };
+}
+
+function loop(name, gain) {
+  const g = audio.createGain();
+  g.gain.value = 0;
+  g.connect(audio.destination);
+  const h = { g, src: null, name };
+  sample(name).then(b => {
+    if (!b || h.stopped) return;
+    h.src = audio.createBufferSource();
+    h.src.buffer = b;
+    h.src.loop = true;
+    h.src.connect(g);
+    h.src.start();
+  });
+  return h;
+}
+function stopLoop(h) { if (!h) return; h.stopped = true; try { h.src && h.src.stop(); } catch { /* déjà arrêté */ } h.g.disconnect(); }
+
+function oneShot(name, gain, rate = 1) {
+  if (st.mute) return;
+  audio = audio || new AudioContext();
+  sample(name).then(b => {
+    if (!b) return;
+    const src = audio.createBufferSource(), g = audio.createGain();
+    src.buffer = b; src.playbackRate.value = rate; g.gain.value = gain;
+    src.connect(g).connect(audio.destination);
+    src.start();
+  });
+}
+
 function carSounds() {
-  const moving = ['run', 'walk', 'race', 'drift'].includes(st.pose) && !st.mute;
   audio = audio || new AudioContext();
   const now = audio.currentTime;
-  if (moving && !engine) {
-    const o = audio.createOscillator(), o2 = audio.createOscillator(), f = audio.createBiquadFilter(), g = audio.createGain();
-    o.type = 'sawtooth'; o2.type = 'square'; f.type = 'lowpass'; f.frequency.value = 700; g.gain.value = 0;
-    o.connect(f); o2.connect(f); f.connect(g).connect(audio.destination);
-    o.start(); o2.start();
-    engine = { o, o2, g };
-  }
-  if (engine) {
-    const f = 42 + Math.abs(st.spd || 0) * 0.14;
-    engine.o.frequency.setTargetAtTime(f, now, 0.08);
-    engine.o2.frequency.setTargetAtTime(f * 0.5, now, 0.08);
-    engine.g.gain.setTargetAtTime(moving ? (st.pose === 'race' ? 0.035 : 0.02) : 0, now, 0.15);
-  }
-  const skid = (st.pose === 'drift' || (st.pose === 'race' && st.slip > 6)) && !st.mute;
-  if (skid && !screech) {
-    const len = audio.sampleRate;
-    const buf = audio.createBuffer(1, len, audio.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-    const src = audio.createBufferSource(); src.buffer = buf; src.loop = true;
-    const f = audio.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2300; f.Q.value = 6;
-    const g = audio.createGain(); g.gain.value = 0;
-    src.connect(f).connect(g).connect(audio.destination); src.start();
-    screech = { src, f, g };
-  }
-  if (screech) {
-    screech.g.gain.setTargetAtTime(skid ? 0.05 : 0, now, 0.05);
-    screech.f.frequency.setTargetAtTime(2100 + Math.random() * 500, now, 0.03);
-  }
+  const { f, pitch } = carInfo();
+  const moving = MOVING.includes(st.pose);
+  if (moving) movedAt = performance.now();
+  if (!engine || engine.name !== f.idle) { stopLoop(engine); engine = loop(f.idle); }
+  // Moteur : plus fort en roulant, ralenti quelques secondes après l'arrêt, puis coupé.
+  const awake = performance.now() - movedAt < 6000 && !(st.sink > 0.5);
+  const vol = st.mute || !awake ? 0 : st.pose === 'race' ? 0.45 : moving ? 0.28 : 0.12;
+  engine.g.gain.setTargetAtTime(vol, now, 0.2);
+  if (engine.src) engine.src.playbackRate.setTargetAtTime(Math.min(2.4, pitch * (0.9 + Math.abs(st.spd || 0) / 520)), now, 0.15);
+  // Montée en régime au démarrage (et au départ de la course).
+  const spd = Math.abs(st.spd || 0);
+  if ((moving && !MOVING.includes(lastPose) && st.pose !== 'drift') || (st.pose === 'race' && lastSpd === 0 && spd > 0)) oneShot(f.rev, 0.4, pitch);
+  lastPose = st.pose; lastSpd = spd;
+  const skidding = (st.pose === 'drift' || (st.pose === 'race' && st.slip > 6)) && !st.mute;
+  if (!skid) skid = loop('skid');
+  skid.g.gain.setTargetAtTime(skidding ? 0.3 : 0, now, 0.05);
 }
 
 function honk() {
-  audio = audio || new AudioContext();
-  const t = audio.currentTime;
-  for (const f of [392, 494]) {
-    const o = audio.createOscillator(), g = audio.createGain();
-    o.type = 'square'; o.frequency.value = f;
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.035, t + 0.01);
-    g.gain.setValueAtTime(0.035, t + 0.22); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
-    o.connect(g).connect(audio.destination); o.start(t); o.stop(t + 0.32);
-  }
+  if (st.pose === 'race') { const { f, pitch } = carInfo(); oneShot(f.pass, 0.5, pitch); return; }
+  oneShot('horn', 0.45);
 }
 
 function render(t) {
   ctx.clearRect(0, 0, cv.width, cv.height);
   if (st.car) { renderCar(t); requestAnimationFrame(render); return; }
-  if (engine) { engine.g.gain.value = 0; }
-  if (screech) { screech.g.gain.value = 0; }
+  if (engine) engine.g.gain.value = 0;
+  if (skid) skid.g.gain.value = 0;
   const p = pose(t);
   const rows = p.rows.map(r => r.slice());
   const face = st.face === 'normal' && (t % 3400) < 130 ? 'closed' : (p.face && st.face === 'normal' ? p.face : st.face);

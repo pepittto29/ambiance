@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('pet', {
   up: () => ipcRenderer.send('pet-up'),
   pickerDone: (ok) => ipcRenderer.send('picker-done', ok),
   info: (action) => ipcRenderer.send('pet-info', action),
+  sound: (name) => ipcRenderer.invoke('pet-sound', name),
   gardenIgnore: (on) => ipcRenderer.send('garden-ignore', on),
   gardenClick: (i) => ipcRenderer.invoke('garden-click', i),
 });

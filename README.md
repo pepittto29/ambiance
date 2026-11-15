@@ -104,6 +104,17 @@ Tous les enregistrements viennent de [Freesound](https://freesound.org) sous lic
 La liste complète (titre, auteur, lien) est dans **Paramètres → Crédits**. Les 13 sons de base sont ceux
 qu'utilise le projet open source Ambie.
 
+Sons de voiture du mode Course (extraits, Creative Commons 0, dans `src/sounds/cars`) :
+- porsche_911.wav par mharo — https://freesound.org/s/55727/
+- S07-11 1972 Porsche in fast; idle; stop.wav par craigsmith — https://freesound.org/s/675268/
+- Ferrari 360 Spider - engine sound par PritzProductions — https://freesound.org/s/241083/
+- Ferrari_motor_idle par jtvdb — https://freesound.org/s/857147/
+- Car Engine: Maserati GranTurismo Switch to Sport Mode and Launch par myeclecticself — https://freesound.org/s/585215/
+- Car Engine: Maserati GranTurismo Drive By 2 par myeclecticself — https://freesound.org/s/585214/
+- Acceleration of a Sports Car Engine like Ferrari or Lamborghini or Porsche par florianreichelt — https://freesound.org/s/457560/
+- Chrysler LHS tire squeal 01 (04-25-2009).wav par audible-edge — https://freesound.org/s/71736/
+- 1933 Austin 10 Clifton Roadster horn par SpliceSound — https://freesound.org/s/828939/
+
 ## Développement
 
 ```bash
